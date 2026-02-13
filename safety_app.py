@@ -634,56 +634,83 @@ if st.session_state.draft_generated:
 if 'result_df' in st.session_state:
     st.divider()
     
-    st.markdown("### 📝 결과 수정 (행 추가/삭제/수정 가능)")
-    st.info("아래 표 내용을 직접 수정하면 하단의 A4 출력물에 **실시간으로 반영**됩니다. (행 추가/삭제 가능)")
+    # 3. 결과 수정 및 확정 (통합 카드 뷰)
+    st.divider()
+    st.markdown("### 📝 위험성평가 수정 및 확정")
+    st.info("각 항목을 직접 수정하세요. 내용은 하단 A4 미리보기에 실시간으로 반영됩니다.")
     
-    # Data Editor for modification
-    edited_df = st.data_editor(
-        st.session_state.result_df, 
-        num_rows="dynamic", 
-        use_container_width=True,
-        key="data_editor",
-        column_config={
-            "단계": st.column_config.TextColumn("단계", width="small"),
-            "위험요인": st.column_config.TextColumn("위험요인", width="medium"),
-            "대책": st.column_config.TextColumn("대책", width="large"),
-            "빈도": st.column_config.NumberColumn("빈도", min_value=1, max_value=5, step=1, width="small"),
-            "강도": st.column_config.NumberColumn("강도", min_value=1, max_value=4, step=1, width="small"),
-            "위험성": st.column_config.NumberColumn("위험성 (자동계산)", disabled=True, width="small"),
-            "등급": st.column_config.TextColumn("등급 (자동계산)", disabled=True, width="small"),
-        }
-    )
-    
-    # Recalculate Risk & Grade (in case user changed Frequency/Severity)
-    edited_df["빈도"] = pd.to_numeric(edited_df["빈도"], errors='coerce').fillna(1)
-    edited_df["강도"] = pd.to_numeric(edited_df["강도"], errors='coerce').fillna(1)
-    edited_df["위험성"] = edited_df["빈도"] * edited_df["강도"]
-    edited_df["등급"] = edited_df["위험성"].apply(lambda x: "🔴 상" if x>=6 else ("🟡 중" if x>=3 else "🟢 하"))
-    
-    # Update Session State from Editor
-    st.session_state.result_df = edited_df
-
-    # 상세 수정 (줄바꿈 편하게 하기 위해)
-    st.markdown("#### 🔍 대책 상세 수정 (줄바꿈 확인용)")
-    if not edited_df.empty:
-        # Create a selection description list
-        row_desc = [f"{i+1}. {row['단계']} - {row['위험요인'][:20]}..." for i, row in edited_df.iterrows()]
-        selected_idx_str = st.selectbox("수정할 항목을 선택하세요:", options=row_desc)
+    if 'result_df' not in st.session_state or st.session_state.result_df.empty:
+        st.warning("데이터가 없습니다.")
+    else:
+        # DataFrame을 리스트 딕셔너리로 변환하여 처리 (삭제/추가 용이성)
+        # 세션 스테이트에 'rows'가 없으면 초기화
+        if 'rows_data' not in st.session_state:
+            st.session_state.rows_data = st.session_state.result_df.to_dict('records')
+            
+        rows = st.session_state.rows_data
         
-        if selected_idx_str:
-            sel_idx = int(selected_idx_str.split(".")[0]) - 1
-            current_measure = edited_df.iloc[sel_idx]["대책"]
+        # 행 추가 버튼 (상단)
+        col_add_top, _ = st.columns([1, 5])
+        if col_add_top.button("➕ 새 항목 추가", key="add_row_top"):
+            new_row = {
+                "단계": "1) 작업준비", 
+                "위험요인": "새로운 위험요인 입력", 
+                "대책": "대책을 입력하세요.", 
+                "빈도": 1, "강도": 1, "위험성": 1, "등급": "🟢 하"
+            }
+            rows.insert(0, new_row)
+            st.rerun()
+
+        # 각 행을 카드 형태로 출력
+        rows_to_delete = []
+        
+        for idx, row in enumerate(rows):
+            with st.container(border=True):
+                # Header: 단계 & 삭제 버튼
+                c1, c2, c3 = st.columns([2, 6, 1])
+                with c1:
+                    new_step = st.text_input(f"작업단계 #{idx+1}", value=row.get('단계', ''), key=f"step_{idx}")
+                    row['단계'] = new_step
+                with c2:
+                    st.empty() # Spacer
+                with c3:
+                    if st.button("🗑️ 삭제", key=f"del_{idx}", type="secondary"):
+                        rows_to_delete.append(idx)
+                
+                # Content: 위험요인 & 대책
+                c_factor, c_measure = st.columns([1, 1])
+                with c_factor:
+                    new_factor = st.text_area("유해위험요인", value=row.get('위험요인', ''), key=f"factor_{idx}", height=100)
+                    row['위험요인'] = new_factor
+                with c_measure:
+                    new_measure = st.text_area("위험 제거 및 감소 대책 (줄바꿈 가능)", value=row.get('대책', ''), key=f"measure_{idx}", height=100)
+                    row['대책'] = new_measure
+                
+                # Footer: 빈도/강도/위험성
+                c_freq, c_sev, c_risk, c_grade = st.columns(4)
+                with c_freq:
+                    new_freq = st.number_input("빈도", min_value=1, max_value=5, value=int(row.get('빈도', 1)), key=f"freq_{idx}")
+                    row['빈도'] = new_freq
+                with c_sev:
+                    new_sev = st.number_input("강도", min_value=1, max_value=4, value=int(row.get('강도', 1)), key=f"sev_{idx}")
+                    row['강도'] = new_sev
+                with c_risk:
+                    risk_val = new_freq * new_sev
+                    row['위험성'] = risk_val
+                    st.metric("위험성", risk_val)
+                with c_grade:
+                    grade = "🔴 상" if risk_val>=6 else ("🟡 중" if risk_val>=3 else "🟢 하")
+                    row['등급'] = grade
+                    st.metric("등급", grade)
+
+        # 삭제 처리
+        if rows_to_delete:
+            for del_idx in sorted(rows_to_delete, reverse=True):
+                del rows[del_idx]
+            st.rerun()
             
-            new_measure = st.text_area(
-                "대책 내용 (여기서 줄바꿈을 자유롭게 수정하세요)", 
-                value=current_measure, 
-                height=150
-            )
-            
-            if new_measure != current_measure:
-                edited_df.at[sel_idx, "대책"] = new_measure
-                st.session_state.result_df = edited_df
-                st.rerun()
+        # 데이터프레임 동기화 (출력 로직이 DF를 쓰므로)
+        st.session_state.result_df = pd.DataFrame(rows)
 
     # 여기서부터 A4 출력 로직으로 대체
     st.divider()
@@ -712,42 +739,125 @@ if 'result_df' in st.session_state:
     current_height = 0
     # Capacity in "lines" (Heuristic)
     # Page 1 has header, so less space. Page N has full space.
-    PAGE_1_CAPACITY = 20.0 
-    PAGE_N_CAPACITY = 28.0
+    # Adjusted capacities to reduce empty space (Optimized for A4)
+    PAGE_1_CAPACITY = 22.0  # Increased from 16
+    PAGE_N_CAPACITY = 32.0  # Increased from 25
     
     limit = PAGE_1_CAPACITY
     
-    for item in flat_data:
-        # Calculate approximate height of this row
+    def count_view_lines(text, chars_per_line):
+        """줄바꿈과 자동 줄바꿈(wrapping)을 모두 고려한 줄 수 계산"""
+        if not text:
+            return 1
+        lines = str(text).split('\n')
+        total = 0
+        for line in lines:
+            length = len(line)
+            if length == 0:
+                total += 1
+            else:
+                total += math.ceil(length / chars_per_line)
+        return total
+
+    def split_text_to_fit(text, max_lines, chars_per_line):
+        """주어진 줄 수(max_lines)에 맞춰 텍스트를 앞부분(head)과 뒷부분(tail)으로 분리"""
+        if not text:
+            return "", ""
+        
+        raw_lines = str(text).split('\n')
+        head_lines = []
+        tail_lines = []
+        
+        current_lines = 0
+        
+        for i, line in enumerate(raw_lines):
+            line_len = len(line)
+            line_cost = 1 if line_len == 0 else math.ceil(line_len / chars_per_line)
+            
+            if current_lines + line_cost <= max_lines:
+                head_lines.append(line)
+                current_lines += line_cost
+            else:
+                # 이 줄에서 잘라야 함
+                remaining_lines_capacity = max_lines - current_lines
+                if remaining_lines_capacity > 0 and line_len > chars_per_line:
+                    # chars_per_line 만큼씩 잘라서 head에 추가
+                    split_idx = int(remaining_lines_capacity * chars_per_line)
+                    if split_idx < line_len:
+                        head_lines.append(line[:split_idx])
+                        tail_lines.append(line[split_idx:])
+                        tail_lines.extend(raw_lines[i+1:])
+                        break
+                    else:
+                        tail_lines.extend(raw_lines[i:])
+                        break
+                else:
+                    tail_lines.extend(raw_lines[i:])
+                    break
+        
+        return "\n".join(head_lines), "\n".join(tail_lines)
+
+    # Process items as a queue
+    queue = flat_data.copy()
+    
+    while queue:
+        item = queue.pop(0)
+        
         measure_text = str(item.get('대책', ''))
         factor_text = str(item.get('위험요인', ''))
         
-        # Count explicit newlines
-        newlines_measure = measure_text.count('\n')
-        newlines_factor = factor_text.count('\n')
-        
-        # Estimate wrapping (Corrected for 35% and 25% column widths in Landscape)
-        # Measure: 35% of 277mm = ~97mm = ~366px / 14px(char) = ~26 chars
-        # Factor: 25% of 277mm = ~69mm = ~260px / 14px(char) = ~18 chars
-        wrap_lines_measure = len(measure_text) / 26
-        wrap_lines_factor = len(factor_text) / 18
-        
-        # Row height is the max of these
-        lines_measure = max(newlines_measure + 1, wrap_lines_measure)
-        lines_factor = max(newlines_factor + 1, wrap_lines_factor)
-        
-        # Minimum height 1.2 used for calculation to account for padding
+        lines_measure = count_view_lines(measure_text, 28)
+        lines_factor = count_view_lines(factor_text, 20)
         row_height = max(1.2, lines_measure, lines_factor)
         
-        if current_height + row_height > limit:
-            # Page break
-            pages.append(current_page)
-            current_page = [item]
-            current_height = row_height
-            limit = PAGE_N_CAPACITY
-        else:
+        if current_height + row_height <= limit:
             current_page.append(item)
             current_height += row_height
+        else:
+            # Overflow
+            remaining_space = limit - current_height
+            
+            # If remaining space is reasonable (e.g. > 3 lines), try logic split
+            if remaining_space >= 3.0:
+                # Split Attempt
+                head_meas, tail_meas = split_text_to_fit(measure_text, int(remaining_space), 28)
+                head_fact, tail_fact = split_text_to_fit(factor_text, int(remaining_space), 20)
+                
+                if not head_meas and not head_fact:
+                    # Split failed or empty, just page break
+                    pages.append(current_page)
+                    current_page = [item]
+                    current_height = row_height
+                    limit = PAGE_N_CAPACITY
+                else:
+                    # Create Head Item
+                    item_head = item.copy()
+                    item_head['대책'] = head_meas
+                    item_head['위험요인'] = head_fact
+                    
+                    # Create Tail Item
+                    item_tail = item.copy()
+                    item_tail['대책'] = tail_meas if tail_meas else "(대책 내용 계속)"
+                    # 유해위험요인이 짧아서 1페이지에 다 들어갔더라도, 2페이지에서 어떤 항목인지 알 수 있게 표시
+                    item_tail['위험요인'] = tail_fact if tail_fact else f"{factor_text} (계속)"
+                    item_tail['is_first'] = False # Tail is continuation
+                    
+                    current_page.append(item_head)
+                    
+                    # Page Break
+                    pages.append(current_page)
+                    current_page = []
+                    current_height = 0
+                    limit = PAGE_N_CAPACITY
+                    
+                    # Push Tail back to Front of Queue
+                    queue.insert(0, item_tail)
+            else:
+                # Not enough space to split gracefully
+                pages.append(current_page)
+                current_page = [item]
+                current_height = row_height
+                limit = PAGE_N_CAPACITY
             
     if current_page:
         pages.append(current_page)
