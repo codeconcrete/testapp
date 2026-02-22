@@ -95,10 +95,10 @@ def apply_custom_css():
         /* 4. Restore natural flow for pages within the area */
         .a4-page {
             position: relative !important;
-            width: max-content !important;
-            min-width: 297mm !important;
-            height: max-content !important;
-            min-height: 200mm !important;
+            width: 297mm !important;
+            max-width: 297mm !important;
+            height: 210mm !important;
+            max-height: 210mm !important;
             page-break-after: always !important;
             page-break-inside: avoid !important;
             margin: 0 !important;
@@ -110,6 +110,7 @@ def apply_custom_css():
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             display: block !important;
+            transform-origin: top left !important;
         }
         
         /* 5. Escape Streamlit's nested layout boundaries */
@@ -126,9 +127,16 @@ def apply_custom_css():
             transform: none !important;
             display: block !important;
         }
+
+        /* 6. Fix Flexbox stretching issues in non-fullscreen web mode */
+        div[data-testid="stVerticalBlock"] > div {
+            width: 100% !important;
+            flex: none !important;
+            display: block !important;
+        }
         
         /* Hide UI elements rigorously */
-        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"] {
+        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"], button[title="View fullscreen"] {
             display: none !important;
         }
     }
