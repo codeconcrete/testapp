@@ -306,7 +306,8 @@ if 'result_df' in st.session_state:
         max_freq = int(group['빈도'].max())
         max_int = int(group['강도'].max())
         max_risk = max_freq * max_int
-        max_grade = "상" if max_risk >= 6 else ("중" if max_risk >= 3 else "하")
+        grade_text = "상" if max_risk >= 6 else ("중" if max_risk >= 3 else "하")
+        max_grade = f"{max_risk}({grade_text})"
         
         rollup_rows.append({
             '단계': step,
