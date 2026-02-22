@@ -54,7 +54,7 @@ def apply_custom_css():
         display: block;
     }
     
-    /* PRINT SETTINGS - NATIVE DOCUMENT FLOW METHOD */
+    /* PRINT SETTINGS - ROBUST VISIBILITY METHOD */
     @media print {
         @page {
             size: A4 landscape;
@@ -67,27 +67,34 @@ def apply_custom_css():
             margin: 0 !important;
             padding: 0 !important;
             background-color: white !important;
-            overflow: visible !important;
         }
 
-        /* Hide all Streamlit layout elements except the one containing the printable area */
-        .element-container {
-            display: none !important;
+        /* 1. Hide EVERYTHING by default to support all browser engines (no :has) */
+        body * {
+            visibility: hidden;
         }
         
-        .element-container:has(#printable-area) {
-            display: block !important;
-            padding: 0 !important;
-            margin: 0 !important;
+        /* 2. Show only the printable area and its offspring */
+        #printable-area, #printable-area * {
+            visibility: visible !important;
+        }
+        
+        /* 3. Pull printable area to top left, pulling it out of the hidden flex flow */
+        #printable-area {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
-        
-        /* Hide UI chrome */
+
+        /* 4. Collapse known bulky UI elements explicitly to prevent massive blank scroll areas */
         header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"], button[title="View fullscreen"], [data-testid="stStatusWidget"] {
             display: none !important;
         }
         
-        /* Ensure parents of element-container don't restrict flow or add margins */
+        /* 5. Disable flex stretch on the parent blocks safely */
         .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"] {
             position: static !important;
             width: 100% !important;
@@ -95,32 +102,18 @@ def apply_custom_css():
             height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
-            display: block !important;
             transform: none !important;
-        }
-        
-        /* Display the printable area natively */
-        #printable-area {
-            position: relative !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
             display: block !important;
-            visibility: visible !important;
-        }
-
-        #printable-area * {
-            visibility: visible !important;
         }
         
-        /* A4 Page Formatting */
+        /* 6. A4 Page Strict Formatting (Prevents bleeding & overlapping) */
         .a4-page {
             position: relative !important;
             width: 297mm !important;
-            height: 210mm !important;
+            height: 210mm !important; /* STRICT HEIGHT */
             page-break-after: always !important;
             page-break-inside: avoid !important;
+            break-after: page !important; /* Modern equivalent */
             margin: 0 !important;
             padding: 10mm 15mm 15mm 15mm !important; /* 상 10mm, 우하좌 15mm 적용 */
             box-sizing: border-box !important;
@@ -130,14 +123,7 @@ def apply_custom_css():
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             display: block !important;
-            overflow: hidden !important; /* 클리핑 추가하여 용지 이탈 방지 */
-        }
-        
-        /* 6. Fix Flexbox stretching issues in non-fullscreen web mode */
-        div[data-testid="stVerticalBlock"] > div {
-            width: 100% !important;
-            flex: none !important;
-            display: block !important;
+            overflow: hidden !important; /* PREVENT OVERLAPPING BLEED! */
         }
     }
     
