@@ -377,7 +377,7 @@ if 'result_df' in st.session_state:
     # Page 1: fixed total height. Base content=24 when header is minimal.
     # When header grows, content area shrinks proportionally.
     extra_header = total_header_lines - base_header_lines  # only the overflow
-    PAGE_1_CAPACITY = max(10.0, 38.0 - extra_header)
+    PAGE_1_CAPACITY = max(10.0, 33.0 - extra_header)
     
     limit = PAGE_1_CAPACITY
     
