@@ -54,7 +54,7 @@ def apply_custom_css():
         display: block;
     }
     
-    /* PRINT SETTINGS - CONTAINER METHOD */
+    /* PRINT SETTINGS - NATIVE DOCUMENT FLOW METHOD */
     @media print {
         @page {
             size: A4 landscape;
@@ -63,45 +63,66 @@ def apply_custom_css():
         
         html, body {
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background-color: white !important;
-            overflow: hidden !important;
+            overflow: visible !important;
+        }
+
+        /* Hide all Streamlit layout elements except the one containing the printable area */
+        .element-container {
+            display: none !important;
         }
         
-        /* 1. Hide EVERYTHING by default */
-        body * {
-            visibility: hidden;
+        .element-container:has(#printable-area) {
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
         }
         
-        /* 2. Show only the printable area and its children constructed in Python */
-        #printable-area, #printable-area * {
-            visibility: visible;
+        /* Hide UI chrome */
+        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"], button[title="View fullscreen"], [data-testid="stStatusWidget"] {
+            display: none !important;
         }
         
-        /* 3. Position the printable area at top-left to overlay hidden content */
+        /* Ensure parents of element-container don't restrict flow or add margins */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"] {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+            transform: none !important;
+        }
+        
+        /* Display the printable area natively */
         #printable-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: relative !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            z-index: 99999 !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+
+        #printable-area * {
+            visibility: visible !important;
         }
         
-        /* 4. Restore natural flow for pages within the area */
+        /* A4 Page Formatting */
         .a4-page {
             position: relative !important;
             width: 297mm !important;
-            max-width: 297mm !important;
             height: 210mm !important;
-            max-height: 210mm !important;
             page-break-after: always !important;
             page-break-inside: avoid !important;
             margin: 0 !important;
-            padding: 10mm 15mm 15mm 15mm !important; /* 상 10mm, 우하좌 15mm 적용 (화면과 동일) */
+            padding: 10mm 15mm 15mm 15mm !important; /* 상 10mm, 우하좌 15mm 적용 */
             box-sizing: border-box !important;
             background-color: white !important;
             box-shadow: none !important;
@@ -109,34 +130,14 @@ def apply_custom_css():
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             display: block !important;
-            transform-origin: top left !important;
+            overflow: hidden !important; /* 클리핑 추가하여 용지 이탈 방지 */
         }
         
-        /* 5. Escape Streamlit's nested layout boundaries */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"], .element-container, .stMarkdown, [data-testid="stMarkdownContainer"] {
-            position: static !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            min-height: 0 !important;
-            overflow: visible !important;
-            transform: none !important;
-            display: block !important;
-        }
-
         /* 6. Fix Flexbox stretching issues in non-fullscreen web mode */
         div[data-testid="stVerticalBlock"] > div {
             width: 100% !important;
             flex: none !important;
             display: block !important;
-        }
-        
-        /* Hide UI elements rigorously */
-        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"], button[title="View fullscreen"] {
-            display: none !important;
         }
     }
     
