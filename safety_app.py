@@ -11,7 +11,7 @@ from modules import safety_ui as ui
 from modules import safety_ai as ai
 
 # 1. UI 설정 및 CSS 적용
-st.set_page_config(page_title="(주)플랜텍 스마트 위험성평가 AI (체험판)", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="스마트 위험성평가 AI", page_icon="🛡️", layout="wide")
 ui.apply_custom_css()
 ui.disable_translation()
 
@@ -32,9 +32,9 @@ ref_vocab_text = f"""[현장 표준 용어 참고 - 반드시 아래 용어를 �
 today_str = datetime.datetime.now().strftime("%Y.%m.%d")
 
 # 3. 메인 타이틀
-st.title("(주)플랜텍 스마트 위험성평가 AI")
+st.title("스마트 위험성평가 AI")
 st.caption("정규 버전")
-st.markdown("**개발자:** (주)플랜텍 전재호")
+st.markdown("**개발자:** [CodeConcrete](https://www.codeconcrete.co.kr)")
 
 st.divider()
 
