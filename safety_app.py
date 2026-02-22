@@ -306,7 +306,7 @@ if 'result_df' in st.session_state:
         max_freq = int(group['빈도'].max())
         max_int = int(group['강도'].max())
         max_risk = max_freq * max_int
-        max_grade = "🔴 상" if max_risk >= 6 else ("🟡 중" if max_risk >= 3 else "🟢 하")
+        max_grade = "상" if max_risk >= 6 else ("중" if max_risk >= 3 else "하")
         
         rollup_rows.append({
             '단계': step,
@@ -373,7 +373,7 @@ if 'result_df' in st.session_state:
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
     # Capacity in "lines" (Heuristic) - User-specified values
-    PAGE_N_CAPACITY = 48.0 
+    PAGE_N_CAPACITY = 46.0 
     # Page 1: fixed total height. Base content=24 when header is minimal.
     # When header grows, content area shrinks proportionally.
     extra_header = total_header_lines - base_header_lines  # only the overflow
