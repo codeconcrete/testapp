@@ -252,7 +252,7 @@ if 'result_df' in st.session_state:
                         new_factor_name = col_title.text_input("⚠️ 유해·위험요인", value=factor_name, key=f"factor_rename_{step_name}_{factor_name}")
                         
                         # ⚠️ Sub-Editor 표시 (대책, 빈도, 강도 위주)
-                        sub_df = factor_group[['대책', '빈도', '강도', '위험성', '등급']].copy()
+                        sub_df = factor_group[['대책', '빈도', '강도', '위험성']].copy()
                         
                         edited_sub_df = st.data_editor(
                             sub_df,
@@ -263,8 +263,7 @@ if 'result_df' in st.session_state:
                                 "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True),
                                 "빈도": st.column_config.NumberColumn("빈도", min_value=1, max_value=5, step=1, required=True, width="small"),
                                 "강도": st.column_config.NumberColumn("강도", min_value=1, max_value=4, step=1, required=True, width="small"),
-                                "위험성": st.column_config.NumberColumn("위험성", disabled=True, width="small"),
-                                "등급": st.column_config.TextColumn("등급", disabled=True, width="small")
+                                "위험성": st.column_config.NumberColumn("위험성", disabled=True, width="small")
                             },
                             hide_index=True
                         )
