@@ -62,12 +62,12 @@ def apply_custom_css():
         }
         
         html, body {
-            width: max-content !important;
-            height: max-content !important;
-            min-width: 100% !important;
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background-color: white !important;
+            overflow: hidden !important;
         }
         
         /* 1. Hide EVERYTHING by default */
@@ -85,8 +85,7 @@ def apply_custom_css():
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: max-content !important;
-            min-width: 100% !important;
+            width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             z-index: 99999 !important;
