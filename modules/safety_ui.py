@@ -54,7 +54,7 @@ def apply_custom_css():
         display: block;
     }
     
-    /* PRINT SETTINGS - ROBUST VISIBILITY METHOD */
+    /* PRINT SETTINGS - ROBUST VISIBILITY METHOD (JS ENHANCED) */
     @media print {
         @page {
             size: A4 landscape;
@@ -67,34 +67,28 @@ def apply_custom_css():
             margin: 0 !important;
             padding: 0 !important;
             background-color: white !important;
+            overflow: visible !important;
         }
 
-        /* 1. Hide EVERYTHING by default to support all browser engines (no :has) */
-        body * {
-            visibility: hidden;
+        /* 1. Hide all Streamlit element containers (this removes all the blank UI pages!) */
+        .element-container {
+            display: none !important;
         }
         
-        /* 2. Show only the printable area and its offspring */
-        #printable-area, #printable-area * {
-            visibility: visible !important;
-        }
-        
-        /* 3. Pull printable area to top left, pulling it out of the hidden flex flow */
-        #printable-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
+        /* 2. ONLY show the container marked by our JS injection (contains the report) */
+        .element-container.report-element-container {
+            display: block !important;
             padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
         }
 
-        /* 4. Collapse known bulky UI elements explicitly to prevent massive blank scroll areas */
+        /* 3. Hide other specific UI scaffolding explicitly */
         header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"], button[title="View fullscreen"], [data-testid="stStatusWidget"] {
             display: none !important;
         }
         
-        /* 5. Disable flex stretch on the parent blocks safely */
+        /* 4. Disable flex stretch to allow pages to flow naturally */
         .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"] {
             position: static !important;
             width: 100% !important;
@@ -104,16 +98,31 @@ def apply_custom_css():
             padding: 0 !important;
             transform: none !important;
             display: block !important;
+            overflow: visible !important;
         }
         
-        /* 6. A4 Page Strict Formatting (Prevents bleeding & overlapping) */
+        /* 5. The printable area flows naturally */
+        #printable-area {
+            position: relative !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+            visibility: visible !important;
+        }
+        
+        #printable-area * {
+            visibility: visible !important;
+        }
+
+        /* 6. A4 Page Strict Formatting */
         .a4-page {
             position: relative !important;
             width: 297mm !important;
             height: 210mm !important; /* STRICT HEIGHT */
             page-break-after: always !important;
             page-break-inside: avoid !important;
-            break-after: page !important; /* Modern equivalent */
+            break-after: page !important;
             margin: 0 !important;
             padding: 10mm 15mm 15mm 15mm !important; /* 상 10mm, 우하좌 15mm 적용 */
             box-sizing: border-box !important;
@@ -150,6 +159,29 @@ def disable_translation():
             meta.content = 'notranslate';
             doc.head.appendChild(meta);
         }
+    </script>
+    """
+    components.html(js, height=0, width=0)
+
+def mark_printable_container():
+    """인쇄용 영역을 담고 있는 최상위 Streamlit element-container에 클래스를 부여하여 다른 빈 컨테이너들과 구분"""
+    import streamlit.components.v1 as components
+    js = """
+    <script>
+        var doc = window.parent.document;
+        function tagContainer() {
+            var printArea = doc.getElementById('printable-area');
+            if (printArea) {
+                var container = printArea.closest('.element-container');
+                if (container) {
+                    container.classList.add('report-element-container');
+                }
+            }
+        }
+        // Run immediately and queue up retries in case of DOM load delays
+        tagContainer();
+        setTimeout(tagContainer, 500);
+        setTimeout(tagContainer, 1500);
     </script>
     """
     components.html(js, height=0, width=0)

@@ -370,8 +370,8 @@ if 'result_df' in st.session_state:
     
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
-    # Capacity in "lines" (Heuristic)
-    PAGE_N_CAPACITY = 45.0 # Slightly decreased N capacity to be safer overall
+    # Capacity in "lines" (Heuristic) - Reduced to prevent exceeding 210mm A4 height
+    PAGE_N_CAPACITY = 36.0 
     PAGE_1_CAPACITY = max(10.0, PAGE_N_CAPACITY - total_header_lines) # Ensure at least some capacity remains
     
     limit = PAGE_1_CAPACITY
@@ -601,3 +601,4 @@ if 'result_df' in st.session_state:
     full_html += '</div>' # Close printable-area
         
     st.markdown(full_html, unsafe_allow_html=True)
+    ui.mark_printable_container()
