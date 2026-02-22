@@ -351,6 +351,7 @@ if 'result_df' in st.session_state:
     # Calculate Dynamic Header Height
     # Base height for header includes the fixed rows and standard spacing
     # Base height for header includes the fixed rows and standard spacing
+    # Base height for header includes the fixed rows and standard spacing
     base_header_lines = 15.0 # Increased base lines to account for padding & margins tighter
     
     # Calculate extra lines needed for long text in header fields
@@ -371,8 +372,8 @@ if 'result_df' in st.session_state:
     
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
-    # Capacity in "lines" (Heuristic) - Maximized for A4 density
-    PAGE_N_CAPACITY = 48.0 
+    # Capacity in "lines" (Heuristic) - Fine-tuned for dense A4 fill without cutoff
+    PAGE_N_CAPACITY = 44.0 
     PAGE_1_CAPACITY = max(10.0, PAGE_N_CAPACITY - total_header_lines) # Ensure at least some capacity remains
     
     limit = PAGE_1_CAPACITY
