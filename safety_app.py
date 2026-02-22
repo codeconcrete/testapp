@@ -350,16 +350,17 @@ if 'result_df' in st.session_state:
     
     # Calculate Dynamic Header Height
     # Base height for header includes the fixed rows and standard spacing
+    # Base height for header includes the fixed rows and standard spacing
     base_header_lines = 15.0 # Increased base lines to account for padding & margins tighter
     
     # Calculate extra lines needed for long text in header fields
     # Make characters per line VERY conservative based on the visual column widths
-    extra_title_lines = max(0, ui.count_view_lines(task_name, 40) - 1)
-    extra_prot_lines = max(0, ui.count_view_lines(', '.join(protectors), 25) - 1)
-    extra_loc_lines = max(0, ui.count_view_lines(location, 25) - 1)
-    extra_equip_lines = max(0, ui.count_view_lines(', '.join(safety_equip), 25) - 1)
-    extra_tools_lines = max(0, ui.count_view_lines(', '.join(tools), 25) - 1)
-    extra_mat_lines = max(0, ui.count_view_lines(', '.join(materials), 25) - 1)
+    extra_title_lines = max(0, ui.count_view_lines(task_name, 45) - 1)
+    extra_prot_lines = max(0, ui.count_view_lines(', '.join(protectors), 30) - 1)
+    extra_loc_lines = max(0, ui.count_view_lines(location, 30) - 1)
+    extra_equip_lines = max(0, ui.count_view_lines(', '.join(safety_equip), 30) - 1)
+    extra_tools_lines = max(0, ui.count_view_lines(', '.join(tools), 30) - 1)
+    extra_mat_lines = max(0, ui.count_view_lines(', '.join(materials), 30) - 1)
     
     # Add up all the extra lines that expand the header vertically
     # Some items are on the same row, so we take the max of the row's items
@@ -370,8 +371,8 @@ if 'result_df' in st.session_state:
     
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
-    # Capacity in "lines" (Heuristic) - Adjusted for optimal A4 fill without overflow
-    PAGE_N_CAPACITY = 40.0 
+    # Capacity in "lines" (Heuristic) - Maximized for A4 density
+    PAGE_N_CAPACITY = 48.0 
     PAGE_1_CAPACITY = max(10.0, PAGE_N_CAPACITY - total_header_lines) # Ensure at least some capacity remains
     
     limit = PAGE_1_CAPACITY
@@ -385,10 +386,10 @@ if 'result_df' in st.session_state:
         measure_text = str(item.get('대책', ''))
         factor_text = str(item.get('위험요인', ''))
         
-        # Calculate height
-        step_lines = ui.count_view_lines(item['step_name'], 12) if item['is_first'] else 0
-        measure_lines = ui.count_view_lines(measure_text, 30) # Relaxed constraint
-        factor_lines = ui.count_view_lines(factor_text, 22)  # Relaxed constraint
+        # Calculate height: relaxed constraints increase line capacity per row
+        step_lines = ui.count_view_lines(item['step_name'], 15) if item['is_first'] else 0
+        measure_lines = ui.count_view_lines(measure_text, 36) # Relaxed constraint
+        factor_lines = ui.count_view_lines(factor_text, 28)  # Relaxed constraint
         
         row_height = max(item['is_first'] * max(step_lines, 1), factor_lines, measure_lines)
         
