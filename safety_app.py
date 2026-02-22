@@ -391,9 +391,9 @@ if 'result_df' in st.session_state:
         factor_text = str(item.get('위험요인', ''))
         
         # Calculate height: relaxed constraints increase line capacity per row
-        step_lines = ui.count_view_lines(item['step_name'], 15) if item['is_first'] else 0
+        step_lines = ui.count_view_lines(item['step_name'], 10) if item['is_first'] else 0
         measure_lines = ui.count_view_lines(measure_text, 36) # Relaxed constraint
-        factor_lines = ui.count_view_lines(factor_text, 28)  # Relaxed constraint
+        factor_lines = ui.count_view_lines(factor_text, 20)  # 위험요인 칼럼은 좁으므로 보수적으로
         
         row_height = max(item['is_first'] * max(step_lines, 1), factor_lines, measure_lines)
         
