@@ -11,14 +11,13 @@ from modules import safety_ui as ui
 from modules import safety_ai as ai
 
 # 1. UI 설정 및 CSS 적용
-st.set_page_config(page_title="스마트 위험성평가", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="(주)플랜텍 스마트 위험성평가 AI (체험판)", page_icon="🛡️", layout="wide")
 ui.apply_custom_css()
+ui.disable_translation()
 
 # 2. 데이터 로드 및 초기화
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-except:
-    api_key = st.text_input("API 키 입력", type="password")
+# Streamlit Secrets에서 API 키 로드
+api_key = st.secrets.get("GEMINI_API_KEY", "")
 
 safety_index, ref_vocab, synonym_map = data_handler.load_safety_index()
 
@@ -33,8 +32,11 @@ ref_vocab_text = f"""[현장 표준 용어 참고 - 반드시 아래 용어를 �
 today_str = datetime.datetime.now().strftime("%Y.%m.%d")
 
 # 3. 메인 타이틀
-st.title("🛡️ AI 건설 위험성평가 생성기")
-st.caption("시스템 버전: 2.0 (Modularized)")
+st.title("(주)플랜텍 스마트 위험성평가 AI")
+st.caption("정규 버전")
+st.markdown("**개발자:** (주)플랜텍 전재호")
+
+st.divider()
 
 # 4. 사용자 입력 (1단계: 작업 정보)
 st.markdown("### 1. 작업 개요 및 위험 특성")
@@ -221,82 +223,105 @@ if 'result_df' in st.session_state:
     
     # 3. 결과 수정 및 확정
     st.divider()
-    st.markdown("### 📝 위험성평가 수정 및 확정")
-    st.info("각 항목을 직접 수정하세요. 내용은 하단 A4 미리보기에 실시간으로 반영됩니다.")
+    st.markdown("### 📝 위험성평가 세부 편집 (전문가 모드)")
+    st.info("💡 각 단계별(▼) 아코디언을 열어 위험요인 그룹 내에서 대책을 수정하세요. 표 안에서 ➕ 버튼을 누르면 해당 위험요인 바로 아래에 새 대책 행이 정확히 삽입됩니다.")
     
     if 'result_df' not in st.session_state or st.session_state.result_df.empty:
         st.warning("데이터가 없습니다.")
     else:
-        if 'rows_data' not in st.session_state:
-            st.session_state.rows_data = st.session_state.result_df.to_dict('records')
-            
-        rows = st.session_state.rows_data
+        current_df = st.session_state.result_df.copy()
         
-        # 행 추가 버튼
-        col_add_top, _ = st.columns([1, 5])
-        if col_add_top.button("➕ 새 항목 추가", key="add_row_top"):
-            new_row = {
-                "단계": "1) 작업준비", 
-                "위험요인": "새로운 위험요인 입력", 
-                "대책": "- 대책을 입력하세요.", 
-                "빈도": 1, "강도": 1, "위험성": 1, "등급": "🟢 하"
-            }
-            rows.insert(0, new_row)
-            st.rerun()
-
-        rows_to_delete = []
+        # 전체 데이터를 담을 임시 리스트 (나중에 하나로 합침)
+        updated_data_frames = []
         
-        for idx, row in enumerate(rows):
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([2, 6, 1])
-                with c1:
-                    new_step = st.text_input(f"작업단계 #{idx+1}", value=row.get('단계', ''), key=f"step_{idx}")
-                    row['단계'] = new_step
-                with c2:
-                    st.empty() 
-                with c3:
-                    if st.button("🗑️ 삭제", key=f"del_{idx}", type="secondary"):
-                        rows_to_delete.append(idx)
+        # 작업단계 별로 그룹화
+        grouped_by_step = current_df.groupby('단계', sort=False)
+        
+        for step_name, step_group in grouped_by_step:
+            with st.expander(f"📁 {step_name}", expanded=True):
+                # 단계 이름 수정 기능
+                new_step_name = st.text_input("현재 그룹 단계명 수정", value=step_name, key=f"step_rename_{step_name}")
                 
-                c_factor, c_measure = st.columns([1, 1])
-                with c_factor:
-                    new_factor = st.text_area("유해위험요인", value=row.get('위험요인', ''), key=f"factor_{idx}", height=100)
-                    row['위험요인'] = new_factor
-                with c_measure:
-                    new_measure = st.text_area("위험 제거 및 감소 대책 (줄바꿈 가능)", value=row.get('대책', ''), key=f"measure_{idx}", height=100)
-                    row['대책'] = new_measure
+                # 다시 위험요인 별로 그룹화
+                grouped_by_factor = step_group.groupby('위험요인', sort=False)
                 
-                c_freq, c_sev, c_risk, c_grade = st.columns(4)
-                with c_freq:
-                    new_freq = st.number_input("빈도", min_value=1, max_value=5, value=int(row.get('빈도', 1)), key=f"freq_{idx}")
-                    row['빈도'] = new_freq
-                with c_sev:
-                    new_sev = st.number_input("강도", min_value=1, max_value=4, value=int(row.get('강도', 1)), key=f"sev_{idx}")
-                    row['강도'] = new_sev
-                with c_risk:
-                    risk_val = new_freq * new_sev
-                    row['위험성'] = risk_val
-                    st.metric("위험성", risk_val)
-                with c_grade:
-                    grade = "🔴 상" if risk_val>=6 else ("🟡 중" if risk_val>=3 else "🟢 하")
-                    row['등급'] = grade
-                    st.metric("등급", grade)
-
-        if rows_to_delete:
-            for del_idx in sorted(rows_to_delete, reverse=True):
-                del rows[del_idx]
-            st.rerun()
-            
-        st.session_state.result_df = pd.DataFrame(rows)
+                for factor_name, factor_group in grouped_by_factor:
+                    with st.container(border=True):
+                        col_title, col_action = st.columns([8, 1])
+                        # 위험요인 수정 박스
+                        new_factor_name = col_title.text_input("⚠️ 유해·위험요인", value=factor_name, key=f"factor_rename_{step_name}_{factor_name}")
+                        
+                        # ⚠️ Sub-Editor 표시 (대책, 빈도, 강도 위주)
+                        sub_df = factor_group[['대책', '빈도', '강도', '위험성', '등급']].copy()
+                        
+                        edited_sub_df = st.data_editor(
+                            sub_df,
+                            num_rows="dynamic",
+                            use_container_width=True,
+                            key=f"editor_{step_name}_{factor_name}",
+                            column_config={
+                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True),
+                                "빈도": st.column_config.NumberColumn("빈도", min_value=1, max_value=5, step=1, required=True, width="small"),
+                                "강도": st.column_config.NumberColumn("강도", min_value=1, max_value=4, step=1, required=True, width="small"),
+                                "위험성": st.column_config.NumberColumn("위험성", disabled=True, width="small"),
+                                "등급": st.column_config.TextColumn("등급", disabled=True, width="small")
+                            },
+                            hide_index=True
+                        )
+                        
+                        # 하위 표 계산식 복원
+                        edited_sub_df['빈도'] = edited_sub_df['빈도'].fillna(1).astype(int)
+                        edited_sub_df['강도'] = edited_sub_df['강도'].fillna(1).astype(int)
+                        edited_sub_df['대책'] = edited_sub_df['대책'].fillna('- 대책을 입력하세요.')
+                        edited_sub_df["위험성"] = edited_sub_df["빈도"] * edited_sub_df["강도"]
+                        edited_sub_df["등급"] = edited_sub_df["위험성"].apply(lambda x: "🔴 상" if x>=6 else ("🟡 중" if x>=3 else "🟢 하"))
+                        
+                        # 다시 상위 정보(단계, 위험요인)를 붙여서 보관
+                        edited_sub_df.insert(0, '위험요인', new_factor_name)
+                        edited_sub_df.insert(0, '단계', new_step_name)
+                        
+                        updated_data_frames.append(edited_sub_df)
+                        
+        # 3. 모든 그룹 변경사항을 하나의 Dataframe으로 재병합 (A4 출력을 위함)
+        if updated_data_frames:
+            st.session_state.result_df = pd.concat(updated_data_frames, ignore_index=True)
 
     # A4 출력 로직
     st.divider()
     st.markdown("### 📋 위험성평가 결과 (A4 출력용)")
     
-    df = st.session_state.result_df
+    df = st.session_state.result_df.copy()
+    
+    # [NEW] PDF 출력을 위한 대책 Roll-up (동일 위험요인의 개별 행들을 하나로 병합)
+    rollup_rows = []
+    
+    # 단계와 위험요인 순서를 유지하며 그룹화
+    for (step, factor), group in df.groupby(['단계', '위험요인'], sort=False):
+        # 빈 대책이나 '-' 만 있는 텍스트는 걸러내고 조인
+        measures = group['대책'].astype(str).tolist()
+        valid_measures = [m for m in measures if m.strip() and m.strip() != '-']
+        combined_measures = "\n".join(valid_measures) if valid_measures else "- 대책을 입력하세요."
+        
+        # 빈도, 강도는 그룹 내 최댓값 적용
+        max_freq = int(group['빈도'].max())
+        max_int = int(group['강도'].max())
+        max_risk = max_freq * max_int
+        max_grade = "🔴 상" if max_risk >= 6 else ("🟡 중" if max_risk >= 3 else "🟢 하")
+        
+        rollup_rows.append({
+            '단계': step,
+            '위험요인': factor,
+            '대책': combined_measures,
+            '빈도': max_freq,
+            '강도': max_int,
+            '위험성': max_risk,
+            '등급': max_grade
+        })
+        
+    rollup_df = pd.DataFrame(rollup_rows)
     
     # Flatten Data for Pagination
-    grouped_df = df.groupby('단계', sort=False)
+    grouped_df = rollup_df.groupby('단계', sort=False)
     flat_data = []
     
     for step_name, group in grouped_df:

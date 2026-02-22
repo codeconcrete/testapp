@@ -4,41 +4,7 @@ import datetime
 def apply_custom_css():
     st.markdown("""
 <style>
-    .stApp { background-color: #1a1a1a; color: #ffffff; }
     h1, h2, h3, p, div { font-family: 'Noto Sans KR', sans-serif; }
-    .stTextInput input { 
-        background-color: #333333 !important; 
-        color: white !important; 
-        caret-color: white !important; /* 커서 색상 흰색 강제 */
-    }
-    .stTextInput input:focus {
-        border: 2px solid #ffffff !important; /* 포커스 시 흰색 테두리 */
-        background-color: #444444 !important; /* 포커스 시 배경 약간 밝게 */
-    }
-    .stTextInput input::selection {
-        background: #2980b9 !important; /* 선택 영역 파란색 */
-        color: white !important;
-    }
-    .stTextInput input::placeholder { color: #aaaaaa !important; opacity: 1; }
-    .stTextInput label, .stMultiSelect label, .stTextInput label p, .stMultiSelect label p { color: #ffffff !important; }
-    
-    /* Additional CSS for TextArea, NumberInput, and Metrics */
-    .stTextArea label p, .stNumberInput label p, .stSelectbox label p {
-        color: #ffffff !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #ffffff !important;
-    }
-    [data-testid="stMetricValue"] {
-        color: #ffffff !important;
-    }
-    
-    /* [New] White style for Date Input, Container Borders, and Dividers */
-    .stDateInput input { color: #000000 !important; font-weight: bold !important; -webkit-text-fill-color: #000000 !important; }
-    .stDateInput label, .stDateInput label p { color: #ffffff !important; }
-    
-    [data-testid="stVerticalBlockBorderWrapper"] > div { border-color: #ffffff !important; }
-    .stDivider, hr { border-bottom-color: #ffffff !important; }
     
     div.stButton > button {
         background-color: #0085ff; color: white; border: none;
@@ -92,7 +58,16 @@ def apply_custom_css():
     @media print {
         @page {
             size: A4 landscape;
-            margin: 0;
+            margin: 0 !important;
+        }
+        
+        html, body {
+            width: max-content !important;
+            height: max-content !important;
+            min-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background-color: white !important;
         }
         
         /* 1. Hide EVERYTHING by default */
@@ -107,49 +82,54 @@ def apply_custom_css():
         
         /* 3. Position the printable area at top-left to overlay hidden content */
         #printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            z-index: 99999;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: max-content !important;
+            min-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            z-index: 99999 !important;
         }
         
         /* 4. Restore natural flow for pages within the area */
         .a4-page {
-            position: relative; /* Natural flow */
-            width: 297mm;
-            height: 210mm;
-            page-break-after: always; /* Ensure new page for each block */
-            margin: 0;
-            padding: 10mm 15mm 15mm 15mm; /* 상 10mm, 우하좌 15mm 적용 (화면과 동일) */
+            position: relative !important;
+            width: max-content !important;
+            min-width: 297mm !important;
+            height: max-content !important;
+            min-height: 200mm !important;
+            page-break-after: always !important;
+            page-break-inside: avoid !important;
+            margin: 0 !important;
+            padding: 10mm 15mm 15mm 15mm !important; /* 상 10mm, 우하좌 15mm 적용 (화면과 동일) */
+            box-sizing: border-box !important;
             background-color: white !important;
-            box-shadow: none;
-            border: none;
+            box-shadow: none !important;
+            border: none !important;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            display: block;
+            display: block !important;
+        }
+        
+        /* 5. Escape Streamlit's nested layout boundaries */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"], .element-container, .stMarkdown, [data-testid="stMarkdownContainer"] {
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            transform: none !important;
+            display: block !important;
         }
         
         /* Hide UI elements rigorously */
-        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print {
+        header, footer, [data-testid="stHeader"], [data-testid="stSidebar"], .stButton, .no-print, [data-testid="stToolbar"] {
             display: none !important;
-        }
-        
-        /* 5. Reset Streamlit container styles to prevent layout shifts */
-        /* 5. Reset Streamlit container styles to prevent layout shifts and blank pages */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMainBlockContainer"], .block-container, .stVerticalBlock, .element-container {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            height: 0 !important; /* Collapse height to remove blank pages */
-            overflow: visible !important; /* Allow the printable area to spill out */
-            transform: none !important;
-            position: absolute !important; /* Force to top-left of viewport */
-            top: 0 !important;
-            left: 0 !important;
         }
     }
     
@@ -160,6 +140,25 @@ def apply_custom_css():
         }
 </style>
 """, unsafe_allow_html=True)
+
+def disable_translation():
+    import streamlit.components.v1 as components
+    # Streamlit 기본 html lang="en" 속성 등에 의해 Edge 번역 팝업이 뜨는 것을 원천적으로 막기 위한 JS Injection
+    js = """
+    <script>
+        var doc = window.parent.document;
+        doc.documentElement.lang = 'ko';
+        doc.documentElement.setAttribute('translate', 'no');
+        
+        if (!doc.querySelector('meta[name="google"]')) {
+            var meta = doc.createElement('meta');
+            meta.name = 'google';
+            meta.content = 'notranslate';
+            doc.head.appendChild(meta);
+        }
+    </script>
+    """
+    components.html(js, height=0, width=0)
 
 def create_header_html(task_name, location, protectors, safety_equip, tools, materials, writer, writer_date, action_taker, reviewer, reviewer_date, checker, approver, approver_date):
     return f'''

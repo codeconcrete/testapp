@@ -34,7 +34,8 @@ def generate_draft_equipment(api_key, task_name, location, risk_factors, risk_co
               예: "안전모" (O), "안전모(턱끈포함)" (X), "굴착기" (O), "굴착기(백호우)" (X)
             - "안전대" 대신 반드시 "전체식 안전벨트"로 작성하세요.
             - 공구/장비명은 현장에서 실제 사용하는 용어를 쓰세요.
-            - **[제외 항목]** 샤클, 슬링벨트, 용접봉, 절단석 등 소모성 자재나 너무 세세한 부속품은 제외하세요. 주요 장비 위주로 작성하세요.
+            - **[제외 항목]** 스패너, 렌치, 드라이버, 망치 등 작업자가 손으로 들고 다니는 소형 수공구는 절대 포함하지 마세요. (주요 대형 장비 위주로 작성)
+            - **[제외 항목]** 샤클, 슬링벨트, 용접봉, 절단석 등 소모성 자재나 너무 세세한 부속품은 제외하세요.
             - **[제외 서류]** "신호수배치확인서", "건설기계검사증" 등은 제외하고 "작업계획서", "안전작업 허가서" 등 핵심 서류만 포함하세요.
             - **[명칭 통일]** "작업허가서"와 "안전작업 허가서"가 중복되지 않게 "안전작업 허가서"로 통일하세요.
             - **[장비 명칭]** 시트파일/파일 공사 시 "바이브레이터"는 혼동될 수 있으므로 "진동 해머(Vibro Hammer)" 또는 "항타기"로 명확히 적으세요. (콘크리트 타설 시에만 "바이브레이터" 사용)
@@ -123,6 +124,25 @@ def generate_risk_assessment(api_key, task_name, location, risk_factors, risk_co
             text = text.replace("```json", "").replace("```", "")
         text = text.strip()
         
-        return json.loads(text, strict=False)
+        raw_data = json.loads(text, strict=False)
+        
+        # [NEW] Explode multiline '대책' into separate rows for DataEditor UI
+        exploded_data = []
+        for row in raw_data:
+            measures_text = str(row.get("대책", ""))
+            
+            # Split by newline and remove empty lines
+            meas_lines = [line.strip() for line in measures_text.split('\n') if line.strip()]
+            
+            if not meas_lines:
+                # Fallback if somehow empty
+                meas_lines = ["- 대책을 입력하세요."]
+                
+            for meas in meas_lines:
+                new_row = row.copy()
+                new_row["대책"] = meas
+                exploded_data.append(new_row)
+            
+        return exploded_data
     except Exception as e:
         raise e
