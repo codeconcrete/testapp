@@ -247,20 +247,27 @@ def create_header_html(task_name, location, protectors, safety_equip, tools, mat
 
 import math
 
-def count_view_lines(text, chars_per_line):
-    """줄바꿈과 자동 줄바꿈(wrapping)을 모두 고려한 줄 수 계산"""
-    if not text:
-        return 1
-    # Fix: Split by actual newline character, not literal string '\n'
-    lines = str(text).split('\n')
-    total = 0
-    for line in lines:
-        length = len(line)
-        if length == 0:
-            total += 1
-        else:
-            total += math.ceil(length / chars_per_line)
-    return total
+def count_view_lines(text, chars_per_line):
+    """줄바꿈과 자동 줄바꿈(wrapping)을 모두 고려한 줄 수 계산
+    한글/CJK 문자는 2칸 너비로 계산하여 실제 렌더링에 가깝게 추정"""
+    if not text:
+        return 1
+    # Fix: Split by actual newline character, not literal string '\\n'
+    lines = str(text).split('\\n')
+    total = 0
+    for line in lines:
+        if not line:
+            total += 1
+        else:
+            # 한글/CJK 문자는 2칸, ASCII는 1칸으로 계산
+            width = 0
+            for ch in line:
+                if ord(ch) > 0x7F:
+                    width += 2
+                else:
+                    width += 1
+            total += max(1, math.ceil(width / chars_per_line))
+    return total
 
 def split_text_to_fit(text, max_lines, chars_per_line):
     """주어진 줄 수(max_lines)에 맞춰 텍스트를 앞부분(head)과 뒷부분(tail)으로 분리"""
