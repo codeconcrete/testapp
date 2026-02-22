@@ -370,8 +370,8 @@ if 'result_df' in st.session_state:
     
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
-    # Capacity in "lines" (Heuristic) - Reduced to prevent exceeding 210mm A4 height
-    PAGE_N_CAPACITY = 36.0 
+    # Capacity in "lines" (Heuristic) - Adjusted for optimal A4 fill without overflow
+    PAGE_N_CAPACITY = 40.0 
     PAGE_1_CAPACITY = max(10.0, PAGE_N_CAPACITY - total_header_lines) # Ensure at least some capacity remains
     
     limit = PAGE_1_CAPACITY

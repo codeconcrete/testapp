@@ -78,9 +78,13 @@ def apply_custom_css():
         /* 2. ONLY show the container marked by our JS injection (contains the report) */
         .element-container.report-element-container {
             display: block !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+            min-height: 210mm !important;
         }
 
         /* 3. Hide other specific UI scaffolding explicitly */
