@@ -372,9 +372,9 @@ if 'result_df' in st.session_state:
     
     total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
     
-    # Capacity in "lines" (Heuristic) - Set to 36.0 per user request
-    PAGE_N_CAPACITY = 36.0 
-    PAGE_1_CAPACITY = max(10.0, PAGE_N_CAPACITY - total_header_lines) # Ensure at least some capacity remains
+    # Capacity in "lines" (Heuristic) - User-specified values
+    PAGE_N_CAPACITY = 37.0 
+    PAGE_1_CAPACITY = 23.0  # Fixed: header excluded, user-specified
     
     limit = PAGE_1_CAPACITY
     
