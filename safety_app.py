@@ -374,7 +374,7 @@ if 'result_df' in st.session_state:
     
     # Capacity in "lines" (Heuristic) - User-specified values
     PAGE_N_CAPACITY = 37.0 
-    PAGE_1_CAPACITY = 23.0  # Fixed: header excluded, user-specified
+    PAGE_1_CAPACITY = 25.0  # Fixed: header excluded, user-specified
     
     limit = PAGE_1_CAPACITY
     
