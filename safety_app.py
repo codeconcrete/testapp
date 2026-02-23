@@ -270,11 +270,11 @@ if 'result_df' in st.session_state:
                             display: none !important;
                         }
                         /* 첫 번째 데이터 열(선택 체크박스)의 너비를 강제로 줄임 */
-                        div[data-testid="stDataFrame"] div[role="columnheader"]:nth-of-type(2),
-                        div[data-testid="stDataFrame"] div[role="gridcell"]:nth-of-type(2) {
-                            max-width: 40px !important;
-                            min-width: 40px !important;
-                            width: 40px !important;
+                        div[data-testid="stDataFrame"] div[role="row"] > div[role="columnheader"]:first-of-type,
+                        div[data-testid="stDataFrame"] div[role="row"] > div[role="gridcell"]:first-of-type {
+                            max-width: 45px !important;
+                            min-width: 45px !important;
+                            width: 45px !important;
                         }
                         </style>
                         """, unsafe_allow_html=True)
