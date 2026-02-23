@@ -266,15 +266,28 @@ if 'result_df' in st.session_state:
                         # 추가 버튼(+) 항상 보이게 하는 CSS 주입
                         st.markdown("""
                         <style>
-                        /* Streamlit data editor 하단 추가 행(회색 텍스트와 + 아이콘) 강제 표시 */
-                        div[data-testid="stDataFrame"] table tbody tr:last-child {
+                        /* Streamlit data_editor 하단 빈 행(추가 버튼 영역) 강제 표시 및 스타일링 */
+                        [data-testid="stDataFrame"] {
+                            /* 기존 hover 시에만 보이던 요소를 항상 보이게 덮어쓰기 */
+                        }
+                        [data-testid="stDataFrame"] .d-style {
+                            /* Data grid 내부 스타일 조정 */
+                        }
+                        /* 가장 확실한 방법: data_editor 컨테이너 자체에 항상 십자버튼 안내를 추가하거나 
+                           테이블 하단의 append row 영역의 투명도를 강제로 1로 설정 */
+                        div[data-testid="stDataFrame"] > div > div > div:nth-child(2) > div > div > div > div[role="row"]:last-child {
                             opacity: 1 !important;
                             visibility: visible !important;
-                            background-color: #f8f9fa !important;
                         }
-                        div[data-testid="stDataFrame"] table tbody tr:last-child td {
-                            color: #0068c9 !important;
-                            font-weight: bold !important;
+                        
+                        /* 글리드 셀 중 비어있는(추가 대기중인) 셀 스타일 강조 */
+                        div[data-testid="stDataFrame"] [aria-colindex="1"]:empty::after {
+                            content: "➕ 클릭하여 내용 추가";
+                            color: #0068c9;
+                            font-weight: bold;
+                            opacity: 0.8;
+                            font-size: 13px;
+                            padding-left: 10px;
                         }
                         </style>
                         """, unsafe_allow_html=True)
