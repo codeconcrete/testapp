@@ -245,34 +245,57 @@ if 'result_df' in st.session_state:
                 grouped_by_factor = step_group.groupby('위험요인', sort=False)
                 
                 for factor_name, factor_group in grouped_by_factor:
-                    with st.container(border=True):
-                        col_title, col_action = st.columns([8, 1])
-                        # 위험요인 수정 박스
+                        # 위험요인의 첫 번째 행 빈도/강도를 기본값으로 사용
+                        default_freq = int(factor_group['빈도'].iloc[0]) if not pd.isna(factor_group['빈도'].iloc[0]) else 1
+                        default_sev  = int(factor_group['강도'].iloc[0]) if not pd.isna(factor_group['강도'].iloc[0]) else 1
+                        
+                        col_title, col_freq, col_sev, col_risk = st.columns([6, 1.5, 1.5, 1.5])
+                        # 위험요인 수정 박스 및 빈도/강도 (통합)
                         new_factor_name = col_title.text_input("⚠️ 유해·위험요인", value=factor_name, key=f"factor_rename_{step_name}_{factor_name}")
+                        new_freq = col_freq.number_input("빈도", min_value=1, max_value=5, value=default_freq, key=f"freq_{step_name}_{factor_name}")
+                        new_sev = col_sev.number_input("강도", min_value=1, max_value=4, value=default_sev, key=f"sev_{step_name}_{factor_name}")
                         
-                        # ⚠️ Sub-Editor 표시 (대책, 빈도, 강도 위주)
-                        sub_df = factor_group[['대책', '빈도', '강도', '위험성']].copy()
+                        risk_score = new_freq * new_sev
+                        risk_grade = "🔴 상" if risk_score >= 6 else ("🟡 중" if risk_score >= 3 else "🟢 하")
+                        col_risk.markdown(f"**위험성 (등급)**<br><span style='font-size:16px;'>{risk_score} ({risk_grade})</span>", unsafe_allow_html=True)
                         
+                        # 대책 입력용 에디터 (빈도/강도 제외)
+                        sub_df = factor_group[['대책']].copy()
+                        sub_df.reset_index(drop=True, inplace=True) # 인덱스 표시 방지 (완전히 숨김 처리)
+                        
+                        # 추가 버튼(+) 항상 보이게 하는 CSS 주입
+                        st.markdown("""
+                        <style>
+                        /* Streamlit data editor 하단 추가 행(회색 텍스트와 + 아이콘) 강제 표시 */
+                        div[data-testid="stDataFrame"] table tbody tr:last-child {
+                            opacity: 1 !important;
+                            visibility: visible !important;
+                            background-color: #f8f9fa !important;
+                        }
+                        div[data-testid="stDataFrame"] table tbody tr:last-child td {
+                            color: #0068c9 !important;
+                            font-weight: bold !important;
+                        }
+                        </style>
+                        """, unsafe_allow_html=True)
+
                         edited_sub_df = st.data_editor(
                             sub_df,
                             num_rows="dynamic",
                             use_container_width=True,
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
-                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True),
-                                "빈도": st.column_config.NumberColumn("빈도", min_value=1, max_value=5, step=1, required=True, width="small"),
-                                "강도": st.column_config.NumberColumn("강도", min_value=1, max_value=4, step=1, required=True, width="small"),
-                                "위험성": st.column_config.NumberColumn("위험성", disabled=True, width="small")
+                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
                             },
                             hide_index=True
                         )
                         
-                        # 하위 표 계산식 복원
-                        edited_sub_df['빈도'] = edited_sub_df['빈도'].fillna(1).astype(int)
-                        edited_sub_df['강도'] = edited_sub_df['강도'].fillna(1).astype(int)
+                        # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
                         edited_sub_df['대책'] = edited_sub_df['대책'].fillna('- 대책을 입력하세요.')
-                        edited_sub_df["위험성"] = edited_sub_df["빈도"] * edited_sub_df["강도"]
-                        edited_sub_df["등급"] = edited_sub_df["위험성"].apply(lambda x: "🔴 상" if x>=6 else ("🟡 중" if x>=3 else "🟢 하"))
+                        edited_sub_df["빈도"] = new_freq
+                        edited_sub_df["강도"] = new_sev
+                        edited_sub_df["위험성"] = risk_score
+                        edited_sub_df["등급"] = risk_grade
                         
                         # 다시 상위 정보(단계, 위험요인)를 붙여서 보관
                         edited_sub_df.insert(0, '위험요인', new_factor_name)
