@@ -160,13 +160,13 @@ if st.session_state.draft_generated:
         
     # 추가 입력 필드 (결재란 및 조치자 등)
     st.markdown("##### ✍️ 추가 정보 입력 (결재란 및 담당자)")
+    st.caption("💡 **Tip:** 인쇄 후 수기로 작성하여 여러 번 재사용하려면, 날짜(작성일/검토일/승인일) 칸을 완전히 지우고 비워두세요.")
     
     col_add1, col_add2, col_add3 = st.columns(3)
     with col_add1:
         st.markdown("**작성자 (Writer)**")
         writer_name = st.text_input("성명", value="관리감독자", key="writer_name", label_visibility="collapsed")
-        writer_date = st.date_input("작성일", value=datetime.date.today(), key="writer_date")
-        writer_date_str = writer_date.strftime("%Y.%m.%d")
+        writer_date_str = st.text_input("작성일", value=datetime.date.today().strftime("%Y.%m.%d"), key="writer_date")
         
         st.markdown("**조치자**")
         action_taker = st.text_input("조치자 성명", value="공급사 관리감독자", key="action_taker", label_visibility="collapsed")
@@ -174,8 +174,7 @@ if st.session_state.draft_generated:
     with col_add2:
         st.markdown("**검토자 (Reviewer)**")
         reviewer_name = st.text_input("성명", value="안전관리자", key="reviewer_name", label_visibility="collapsed")
-        reviewer_date = st.date_input("검토일", value=datetime.date.today(), key="reviewer_date")
-        reviewer_date_str = reviewer_date.strftime("%Y.%m.%d")
+        reviewer_date_str = st.text_input("검토일", value=datetime.date.today().strftime("%Y.%m.%d"), key="reviewer_date")
         
         st.markdown("**이행상태 확인**")
         checker_name = st.text_input("확인자 성명", value="시공사 관리감독자", key="checker_name", label_visibility="collapsed")
@@ -183,8 +182,7 @@ if st.session_state.draft_generated:
     with col_add3:
         st.markdown("**승인자 (Approver)**")
         approver_name = st.text_input("성명", value="현장소장", key="approver_name", label_visibility="collapsed")
-        approver_date = st.date_input("승인일", value=datetime.date.today(), key="approver_date")
-        approver_date_str = approver_date.strftime("%Y.%m.%d")
+        approver_date_str = st.text_input("승인일", value=datetime.date.today().strftime("%Y.%m.%d"), key="approver_date")
 
     st.markdown("---")
     generate_final_btn = st.button("🚀 위험성평가표 최종 생성하기 (2단계)", use_container_width=True)
