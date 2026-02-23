@@ -52,6 +52,7 @@ with col1:
 
 with col2:
     location = st.text_input("작업 위치", placeholder="예: 105동 외부 지상 3층~5층")
+    site_name = st.text_input("현장명", placeholder="예: OO건설 현장")
     risk_context_manual = st.text_input("기타 위험 특성 (직접 입력)", placeholder="예: 강풍 예상, 야간 작업, 인접 장비 동시 작업 등")
 
 # 세션 상태 초기화
@@ -342,7 +343,7 @@ if 'result_df' in st.session_state:
     
     # Header HTML
     header_html = ui.create_header_html(
-        task_name, location, protectors, safety_equip, tools, materials,
+        task_name, location, site_name, protectors, safety_equip, tools, materials,
         writer_name, writer_date_str, action_taker, 
         reviewer_name, reviewer_date_str, checker_name, 
         approver_name, approver_date_str

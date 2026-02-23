@@ -190,7 +190,7 @@ def mark_printable_container():
     """
     components.html(js, height=0, width=0)
 
-def create_header_html(task_name, location, protectors, safety_equip, tools, materials, writer, writer_date, action_taker, reviewer, reviewer_date, checker, approver, approver_date):
+def create_header_html(task_name, location, site_name, protectors, safety_equip, tools, materials, writer, writer_date, action_taker, reviewer, reviewer_date, checker, approver, approver_date):
     return f'''
 <div style="text-align:right; font-size:10px; margin-bottom:5px; color:black;">(보존기간 : 3년)</div>
 <table class="safety-table" style="width: 100%; table-layout: fixed;">
@@ -204,7 +204,9 @@ def create_header_html(task_name, location, protectors, safety_equip, tools, mat
     </colgroup>
     <tr>
         <th>단위 작업명</th>
-        <td class="left-align" colspan="5" style="color: blue; font-weight: bold; font-size:14px;">{task_name}</td>
+        <td class="left-align" colspan="2" style="color: blue; font-weight: bold; font-size:14px;">{task_name}</td>
+        <th>현 장 명</th>
+        <td class="left-align" colspan="2">{site_name}</td>
     </tr>
     <tr>
         <th>보 호 구</th>
@@ -247,27 +249,48 @@ def create_header_html(task_name, location, protectors, safety_equip, tools, mat
 
 import math
 
-def count_view_lines(text, chars_per_line):
-    """줄바꿈과 자동 줄바꿈(wrapping)을 모두 고려한 줄 수 계산
-    한글/CJK 문자는 2칸 너비로 계산하여 실제 렌더링에 가깝게 추정"""
-    if not text:
-        return 1
-    # Fix: Split by actual newline character, not literal string '\\n'
-    lines = str(text).split('\\n')
-    total = 0
-    for line in lines:
-        if not line:
-            total += 1
-        else:
-            # 한글/CJK 문자는 2칸, ASCII는 1칸으로 계산
-            width = 0
-            for ch in line:
-                if ord(ch) > 0x7F:
-                    width += 2
-                else:
-                    width += 1
-            total += max(1, math.ceil(width / chars_per_line))
-    return total
+def count_view_lines(text, chars_per_line):
+
+    """줄바꿈과 자동 줄바꿈(wrapping)을 모두 고려한 줄 수 계산
+
+    한글/CJK 문자는 2칸 너비로 계산하여 실제 렌더링에 가깝게 추정"""
+
+    if not text:
+
+        return 1
+
+    # Fix: Split by actual newline character, not literal string '\\n'
+
+    lines = str(text).split('\\n')
+
+    total = 0
+
+    for line in lines:
+
+        if not line:
+
+            total += 1
+
+        else:
+
+            # 한글/CJK 문자는 2칸, ASCII는 1칸으로 계산
+
+            width = 0
+
+            for ch in line:
+
+                if ord(ch) > 0x7F:
+
+                    width += 2
+
+                else:
+
+                    width += 1
+
+            total += max(1, math.ceil(width / chars_per_line))
+
+    return total
+
 
 def split_text_to_fit(text, max_lines, chars_per_line):
     """주어진 줄 수(max_lines)에 맞춰 텍스트를 앞부분(head)과 뒷부분(tail)으로 분리"""
