@@ -269,13 +269,6 @@ if 'result_df' in st.session_state:
                         div[data-testid="stDataFrame"] div[role="rowheader"] {
                             display: none !important;
                         }
-                        /* 첫 번째 데이터 열(선택 체크박스)의 너비를 강제로 줄임 */
-                        div[data-testid="stDataFrame"] div[role="row"] > div[role="columnheader"]:first-of-type,
-                        div[data-testid="stDataFrame"] div[role="row"] > div[role="gridcell"]:first-of-type {
-                            max-width: 45px !important;
-                            min-width: 45px !important;
-                            width: 45px !important;
-                        }
                         </style>
                         """, unsafe_allow_html=True)
 
@@ -285,7 +278,7 @@ if 'result_df' in st.session_state:
                             use_container_width=True,
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
-                                "선택": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width="small"),
+                                "선택": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width=45),
                                 "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
                             },
                             hide_index=True
