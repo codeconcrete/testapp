@@ -265,19 +265,23 @@ if 'result_df' in st.session_state:
                         # "선택" 체크박스 열 너비 강제 최소화 CSS 주입
                         st.markdown("""
                         <style>
-                        /* 첫 번째 열(선택 체크박스)의 너비를 강제로 줄임 */
-                        div[data-testid="stDataFrame"] div[role="columnheader"][aria-colindex="2"],
-                        div[data-testid="stDataFrame"] div[role="gridcell"][aria-colindex="2"] {
-                            max-width: 60px !important;
-                            min-width: 60px !important;
-                            width: 60px !important;
+                        /* 명시적 추가/삭제 버튼을 사용하므로 왼쪽 인덱스 열을 완전히 숨김처리 */
+                        div[data-testid="stDataFrame"] div[role="rowheader"] {
+                            display: none !important;
+                        }
+                        /* 첫 번째 데이터 열(선택 체크박스)의 너비를 강제로 줄임 */
+                        div[data-testid="stDataFrame"] div[role="columnheader"]:nth-of-type(2),
+                        div[data-testid="stDataFrame"] div[role="gridcell"]:nth-of-type(2) {
+                            max-width: 40px !important;
+                            min-width: 40px !important;
+                            width: 40px !important;
                         }
                         </style>
                         """, unsafe_allow_html=True)
 
                         edited_sub_df = st.data_editor(
                             sub_df,
-                            num_rows="dynamic",
+                            num_rows="fixed", # 명시적 버튼을 사용하므로 기본 동적 추가 비활성화하여 인덱스 숨김 유지
                             use_container_width=True,
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
