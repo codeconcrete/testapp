@@ -42,6 +42,7 @@ st.divider()
 st.markdown("### 1. 작업 개요 및 위험 특성")
 col1, col2 = st.columns(2)
 with col1:
+    site_name = st.text_input("현장명", placeholder="예: OO건설 현장")
     task_name = st.text_input("작업명", placeholder="예: 외부 비계 해체 작업")
     risk_factors = st.multiselect(
         "해당되는 위험 작업 특성을 모두 선택하세요 (자동 추천에 반영)",
@@ -52,7 +53,6 @@ with col1:
 
 with col2:
     location = st.text_input("작업 위치", placeholder="예: 105동 외부 지상 3층~5층")
-    site_name = st.text_input("현장명", placeholder="예: OO건설 현장")
     risk_context_manual = st.text_input("기타 위험 특성 (직접 입력)", placeholder="예: 강풍 예상, 야간 작업, 인접 장비 동시 작업 등")
 
 # 세션 상태 초기화

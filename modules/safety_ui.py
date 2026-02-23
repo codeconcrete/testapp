@@ -203,10 +203,10 @@ def create_header_html(task_name, location, site_name, protectors, safety_equip,
         <col style="width: 15%;">
     </colgroup>
     <tr>
-        <th>단위 작업명</th>
-        <td class="left-align" colspan="2" style="color: blue; font-weight: bold; font-size:14px;">{task_name}</td>
         <th>현 장 명</th>
         <td class="left-align" colspan="2">{site_name}</td>
+        <th>단위 작업명</th>
+        <td class="left-align" colspan="2" style="color: blue; font-weight: bold; font-size:14px;">{task_name}</td>
     </tr>
     <tr>
         <th>보 호 구</th>
