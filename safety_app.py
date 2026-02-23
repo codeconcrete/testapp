@@ -261,34 +261,8 @@ if 'result_df' in st.session_state:
                         
                         # 대책 입력용 에디터 (빈도/강도 제외)
                         sub_df = factor_group[['대책']].copy()
-                        sub_df['🗑️ 삭제'] = False # 명시적 삭제용 체크박스 컬럼 추가
-                        sub_df.reset_index(drop=True, inplace=True) # 인덱스 표시 방지 (완전히 숨김 처리)
-                        
-                        # 추가 버튼(+) 항상 보이게 하는 CSS 주입
-                        # 추가 버튼(+) 항상 보이게 하는 CSS 주입
-                        st.markdown("""
-                        <style>
-                        /* Streamlit data editor 하단 빈 행(추가 버튼 영역) 강제 밝히기 */
-                        div[data-testid="stDataFrame"] table tbody tr:last-child, 
-                        div[data-testid="stDataFrame"] div[role="row"]:last-child {
-                            opacity: 1 !important;
-                            visibility: visible !important;
-                            background-color: #f1f8ff !important; /* 연한 파란색 배경으로 강조 */
-                        }
-                        div[data-testid="stDataFrame"] table tbody tr:last-child * {
-                            color: #0068c9 !important;
-                            font-weight: 800 !important;
-                        }
-                        
-                        /* 글리드 셀 중 비어있는(추가 대기중인) 셀 스타일 강조 */
-                        div[data-testid="stDataFrame"] div[role="row"]:last-child div[aria-colindex="1"]::after {
-                            content: " ➕ 클릭하여 대책 추가";
-                            color: #0068c9 !important;
-                            font-weight: bold !important;
-                            font-size: 14px !important;
-                        }
-                        </style>
-                        """, unsafe_allow_html=True)
+                        sub_df['🗑️'] = False # 명시적 삭제용 체크박스 (너비 최소화)
+                        sub_df.reset_index(drop=True, inplace=True) # 인덱스 표시 방지
 
                         edited_sub_df = st.data_editor(
                             sub_df,
@@ -297,14 +271,20 @@ if 'result_df' in st.session_state:
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
                                 "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True),
-                                "🗑️ 삭제": st.column_config.CheckboxColumn("삭제", help="체크하면 항목이 삭제됩니다", default=False, width="small")
+                                "🗑️": st.column_config.CheckboxColumn("삭제(체크)", help="체크하면 항목이 삭제됩니다", default=False, width="small")
                             },
                             hide_index=True
                         )
                         
+                        # 명시적인 행 추가 버튼 제공 (Streamlit 기본 추가UI가 안 보일 때 대비)
+                        _, btn_col = st.columns([8, 2])
+                        if btn_col.button("➕ 대책 1줄 추가", key=f"btn_add_{step_name}_{factor_name}"):
+                            # 새 빈 행 추가 
+                            edited_sub_df.loc[len(edited_sub_df)] = ["", False]
+                        
                         # 체크된 행 걸러내기 (지우기)
-                        edited_sub_df = edited_sub_df[edited_sub_df['🗑️ 삭제'] == False]
-                        edited_sub_df = edited_sub_df.drop(columns=['🗑️ 삭제'])
+                        edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False]
+                        edited_sub_df = edited_sub_df.drop(columns=['🗑️'])
                         
                         # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
                         edited_sub_df['대책'] = edited_sub_df['대책'].fillna('- 대책을 입력하세요.')
