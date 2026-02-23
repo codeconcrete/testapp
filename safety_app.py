@@ -261,7 +261,7 @@ if 'result_df' in st.session_state:
                         
                         # 대책 입력용 에디터 (빈도/강도 제외)
                         sub_df = factor_group[['대책']].copy()
-                        sub_df.insert(0, '선택', False) # 명시적 삭제용 체크박스
+                        sub_df.insert(0, '🗑️', False) # 명시적 삭제용 체크박스
                         # "선택" 체크박스 열 너비 강제 최소화 CSS 주입
                         st.markdown("""
                         <style>
@@ -278,7 +278,7 @@ if 'result_df' in st.session_state:
                             use_container_width=True,
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
-                                "선택": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width=45),
+                                "🗑️": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width="small"),
                                 "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
                             },
                             hide_index=True
@@ -293,12 +293,12 @@ if 'result_df' in st.session_state:
                             st.session_state['needs_rerun'] = True
                         
                         if del_col.button("삭제", key=f"btn_del_{step_name}_{factor_name}", use_container_width=True):
-                            # 버튼이 눌렸을 때만 '선택'이 True인 행 지우기
-                            edited_sub_df = edited_sub_df[edited_sub_df['선택'] == False].reset_index(drop=True)
+                            # 버튼이 눌렸을 때만 '🗑️'가 True인 행 지우기
+                            edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False].reset_index(drop=True)
                             st.session_state['needs_rerun'] = True
                         
                         # 저장용 데이터프레임에서는 삭제용 체크박스 컬럼을 지웁니다
-                        final_sub_df = edited_sub_df.drop(columns=['선택'])
+                        final_sub_df = edited_sub_df.drop(columns=['🗑️'])
                         
                         # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
                         final_sub_df['대책'] = final_sub_df['대책'].fillna('- 대책을 입력하세요.')
