@@ -277,14 +277,14 @@ if 'result_df' in st.session_state:
                         )
                         
                         # 명시적인 행 추가/삭제 버튼 제공
-                        _, add_col, del_col = st.columns([6, 2, 2])
+                        _, add_col, del_col = st.columns([7.6, 1.2, 1.2])
                         
-                        if add_col.button("➕ 추가", key=f"btn_add_{step_name}_{factor_name}"):
+                        if add_col.button("➕ 추가", key=f"btn_add_{step_name}_{factor_name}", use_container_width=True):
                             # 새 빈 행 추가 
                             edited_sub_df.loc[len(edited_sub_df)] = [False, ""]
                             st.session_state['needs_rerun'] = True
                         
-                        if del_col.button("🗑️ 삭제", key=f"btn_del_{step_name}_{factor_name}"):
+                        if del_col.button("🗑️ 삭제", key=f"btn_del_{step_name}_{factor_name}", use_container_width=True):
                             # 버튼이 눌렸을 때만 '🗑️'가 True인 행 지우기
                             edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False].reset_index(drop=True)
                             st.session_state['needs_rerun'] = True
