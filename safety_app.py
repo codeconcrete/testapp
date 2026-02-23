@@ -261,33 +261,31 @@ if 'result_df' in st.session_state:
                         
                         # 대책 입력용 에디터 (빈도/강도 제외)
                         sub_df = factor_group[['대책']].copy()
+                        sub_df['🗑️ 삭제'] = False # 명시적 삭제용 체크박스 컬럼 추가
                         sub_df.reset_index(drop=True, inplace=True) # 인덱스 표시 방지 (완전히 숨김 처리)
                         
                         # 추가 버튼(+) 항상 보이게 하는 CSS 주입
+                        # 추가 버튼(+) 항상 보이게 하는 CSS 주입
                         st.markdown("""
                         <style>
-                        /* Streamlit data_editor 하단 빈 행(추가 버튼 영역) 강제 표시 및 스타일링 */
-                        [data-testid="stDataFrame"] {
-                            /* 기존 hover 시에만 보이던 요소를 항상 보이게 덮어쓰기 */
-                        }
-                        [data-testid="stDataFrame"] .d-style {
-                            /* Data grid 내부 스타일 조정 */
-                        }
-                        /* 가장 확실한 방법: data_editor 컨테이너 자체에 항상 십자버튼 안내를 추가하거나 
-                           테이블 하단의 append row 영역의 투명도를 강제로 1로 설정 */
-                        div[data-testid="stDataFrame"] > div > div > div:nth-child(2) > div > div > div > div[role="row"]:last-child {
+                        /* Streamlit data editor 하단 빈 행(추가 버튼 영역) 강제 밝히기 */
+                        div[data-testid="stDataFrame"] table tbody tr:last-child, 
+                        div[data-testid="stDataFrame"] div[role="row"]:last-child {
                             opacity: 1 !important;
                             visibility: visible !important;
+                            background-color: #f1f8ff !important; /* 연한 파란색 배경으로 강조 */
+                        }
+                        div[data-testid="stDataFrame"] table tbody tr:last-child * {
+                            color: #0068c9 !important;
+                            font-weight: 800 !important;
                         }
                         
                         /* 글리드 셀 중 비어있는(추가 대기중인) 셀 스타일 강조 */
-                        div[data-testid="stDataFrame"] [aria-colindex="1"]:empty::after {
-                            content: "➕ 클릭하여 내용 추가";
-                            color: #0068c9;
-                            font-weight: bold;
-                            opacity: 0.8;
-                            font-size: 13px;
-                            padding-left: 10px;
+                        div[data-testid="stDataFrame"] div[role="row"]:last-child div[aria-colindex="1"]::after {
+                            content: " ➕ 클릭하여 대책 추가";
+                            color: #0068c9 !important;
+                            font-weight: bold !important;
+                            font-size: 14px !important;
                         }
                         </style>
                         """, unsafe_allow_html=True)
@@ -298,10 +296,15 @@ if 'result_df' in st.session_state:
                             use_container_width=True,
                             key=f"editor_{step_name}_{factor_name}",
                             column_config={
-                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
+                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True),
+                                "🗑️ 삭제": st.column_config.CheckboxColumn("삭제", help="체크하면 항목이 삭제됩니다", default=False, width="small")
                             },
                             hide_index=True
                         )
+                        
+                        # 체크된 행 걸러내기 (지우기)
+                        edited_sub_df = edited_sub_df[edited_sub_df['🗑️ 삭제'] == False]
+                        edited_sub_df = edited_sub_df.drop(columns=['🗑️ 삭제'])
                         
                         # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
                         edited_sub_df['대책'] = edited_sub_df['대책'].fillna('- 대책을 입력하세요.')
@@ -314,7 +317,9 @@ if 'result_df' in st.session_state:
                         edited_sub_df.insert(0, '위험요인', new_factor_name)
                         edited_sub_df.insert(0, '단계', new_step_name)
                         
-                        updated_data_frames.append(edited_sub_df)
+                        # 대책이 하나라도 남아있는 경우만 추가 (모두 삭제하면 그룹 자체를 생략)
+                        if not edited_sub_df.empty:
+                            updated_data_frames.append(edited_sub_df)
                         
         # 3. 모든 그룹 변경사항을 하나의 Dataframe으로 재병합 (A4 출력을 위함)
         if updated_data_frames:
