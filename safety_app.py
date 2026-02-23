@@ -276,30 +276,39 @@ if 'result_df' in st.session_state:
                             hide_index=True
                         )
                         
-                        # 명시적인 행 추가 버튼 제공 (Streamlit 기본 추가UI가 안 보일 때 대비)
-                        _, btn_col = st.columns([8, 2])
-                        if btn_col.button("➕ 대책 1줄 추가", key=f"btn_add_{step_name}_{factor_name}"):
+                        # 명시적인 행 추가/삭제 버튼 제공
+                        _, del_col, add_col = st.columns([6, 2, 2])
+                        
+                        # 삭제 버튼 로직
+                        if del_col.button("🗑️ 선택 항목 삭제", key=f"btn_del_{step_name}_{factor_name}"):
+                            # 버튼이 눌렸을 때만 '🗑️'가 True인 행 지우기
+                            edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False].reset_index(drop=True)
+                            st.rerun() # 즉시 화면 갱신
+                        
+                        # 체크된 상태를 풀지 않고 유지하되, 최종 저장시에는 삭제 컬럼을 드롭합니다 (아래에서 처리)
+                        
+                        if add_col.button("➕ 대책 1줄 추가", key=f"btn_add_{step_name}_{factor_name}"):
                             # 새 빈 행 추가 
                             edited_sub_df.loc[len(edited_sub_df)] = ["", False]
+                            st.rerun() # 즉시 화면 갱신
                         
-                        # 체크된 행 걸러내기 (지우기)
-                        edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False]
-                        edited_sub_df = edited_sub_df.drop(columns=['🗑️'])
+                        # 저장용 데이터프레임에서는 삭제용 체크박스 컬럼을 지웁니다
+                        final_sub_df = edited_sub_df.drop(columns=['🗑️'])
                         
                         # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
-                        edited_sub_df['대책'] = edited_sub_df['대책'].fillna('- 대책을 입력하세요.')
-                        edited_sub_df["빈도"] = new_freq
-                        edited_sub_df["강도"] = new_sev
-                        edited_sub_df["위험성"] = risk_score
-                        edited_sub_df["등급"] = risk_grade
+                        final_sub_df['대책'] = final_sub_df['대책'].fillna('- 대책을 입력하세요.')
+                        final_sub_df["빈도"] = new_freq
+                        final_sub_df["강도"] = new_sev
+                        final_sub_df["위험성"] = risk_score
+                        final_sub_df["등급"] = risk_grade
                         
                         # 다시 상위 정보(단계, 위험요인)를 붙여서 보관
-                        edited_sub_df.insert(0, '위험요인', new_factor_name)
-                        edited_sub_df.insert(0, '단계', new_step_name)
+                        final_sub_df.insert(0, '위험요인', new_factor_name)
+                        final_sub_df.insert(0, '단계', new_step_name)
                         
                         # 대책이 하나라도 남아있는 경우만 추가 (모두 삭제하면 그룹 자체를 생략)
-                        if not edited_sub_df.empty:
-                            updated_data_frames.append(edited_sub_df)
+                        if not final_sub_df.empty:
+                            updated_data_frames.append(final_sub_df)
                         
         # 3. 모든 그룹 변경사항을 하나의 Dataframe으로 재병합 (A4 출력을 위함)
         if updated_data_frames:
