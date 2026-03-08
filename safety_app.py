@@ -648,4 +648,5 @@ if 'result_df' in st.session_state:
             full_html += '</div>' # Close printable-area
                 
             st.markdown(full_html, unsafe_allow_html=True)
+            unsafe_allow_html=True)
             ui.mark_printable_container()
