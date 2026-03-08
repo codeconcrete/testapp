@@ -222,287 +222,242 @@ if 'result_df' in st.session_state:
     
     # 3. 결과 수정 및 확정
     st.divider()
+    st.markdown("### 📝 위험성평가 세부 편집 (전문가 모드)")
+    st.info("💡 각 단계별(▼) 아코디언을 열어 위험요인 그룹 내에서 대책을 수정하세요. 표 안에서 ➕ 버튼을 누르면 해당 위험요인 바로 아래에 새 대책 행이 정확히 삽입됩니다.")
     
-    tab_edit, tab_report = st.tabs(["📝 세부 편집 (전문가 모드)", "📋 출력용 결과표 (Report)"])
+    if 'result_df' not in st.session_state or st.session_state.result_df.empty:
+        st.warning("데이터가 없습니다.")
+    else:
+        current_df = st.session_state.result_df.copy()
+        
+        # 전체 데이터를 담을 임시 리스트 (나중에 하나로 합침)
+        updated_data_frames = []
+        
+        # 작업단계 별로 그룹화
+        grouped_by_step = current_df.groupby('단계', sort=False)
+        
+        for step_name, step_group in grouped_by_step:
+            with st.expander(f"📁 {step_name}", expanded=True):
+                # 단계 이름 수정 기능
+                new_step_name = st.text_input("현재 그룹 단계명 수정", value=step_name, key=f"step_rename_{step_name}")
+                
+                # 다시 위험요인 별로 그룹화
+                grouped_by_factor = step_group.groupby('위험요인', sort=False)
+                
+                for factor_name, factor_group in grouped_by_factor:
+                        # 위험요인의 첫 번째 행 빈도/강도를 기본값으로 사용
+                        default_freq = int(factor_group['빈도'].iloc[0]) if not pd.isna(factor_group['빈도'].iloc[0]) else 1
+                        default_sev  = int(factor_group['강도'].iloc[0]) if not pd.isna(factor_group['강도'].iloc[0]) else 1
+                        
+                        col_title, col_freq, col_sev, col_risk = st.columns([6, 1.5, 1.5, 1.5])
+                        # 위험요인 수정 박스 및 빈도/강도 (통합)
+                        new_factor_name = col_title.text_input("⚠️ 유해·위험요인", value=factor_name, key=f"factor_rename_{step_name}_{factor_name}")
+                        new_freq = col_freq.number_input("빈도", min_value=1, max_value=5, value=default_freq, key=f"freq_{step_name}_{factor_name}")
+                        new_sev = col_sev.number_input("강도", min_value=1, max_value=4, value=default_sev, key=f"sev_{step_name}_{factor_name}")
+                        
+                        risk_score = new_freq * new_sev
+                        risk_grade = "🔴 상" if risk_score >= 6 else ("🟡 중" if risk_score >= 3 else "🟢 하")
+                        col_risk.markdown(f"**위험성 (등급)**<br><span style='font-size:16px;'>{risk_score} ({risk_grade})</span>", unsafe_allow_html=True)
+                        
+                        # 대책 입력용 에디터 (빈도/강도 제외)
+                        sub_df = factor_group[['대책']].copy()
+                        sub_df.insert(0, '🗑️', False) # 명시적 삭제용 체크박스
+                        # "선택" 체크박스 열 너비 강제 최소화 CSS 주입
+                        st.markdown("""
+                        <style>
+                        /* 명시적 추가/삭제 버튼을 사용하므로 왼쪽 인덱스 열을 완전히 숨김처리 */
+                        div[data-testid="stDataFrame"] div[role="rowheader"] {
+                            display: none !important;
+                        }
+                        </style>
+                        """, unsafe_allow_html=True)
+
+                        edited_sub_df = st.data_editor(
+                            sub_df,
+                            num_rows="fixed", # 명시적 버튼을 사용하므로 기본 동적 추가 비활성화하여 인덱스 숨김 유지
+                            use_container_width=True,
+                            key=f"editor_{step_name}_{factor_name}",
+                            column_config={
+                                "🗑️": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width="small"),
+                                "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
+                            },
+                            hide_index=True
+                        )
+                        
+                        # 명시적인 행 추가/삭제 버튼 제공
+                        _, add_col, del_col = st.columns([7.6, 1.2, 1.2])
+                        
+                        if add_col.button("추가", key=f"btn_add_{step_name}_{factor_name}", use_container_width=True):
+                            # 새 빈 행 추가 
+                            edited_sub_df.loc[len(edited_sub_df)] = [False, ""]
+                            st.session_state['needs_rerun'] = True
+                        
+                        if del_col.button("삭제", key=f"btn_del_{step_name}_{factor_name}", use_container_width=True):
+                            # 버튼이 눌렸을 때만 '🗑️'가 True인 행 지우기
+                            edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False].reset_index(drop=True)
+                            st.session_state['needs_rerun'] = True
+                        
+                        # 저장용 데이터프레임에서는 삭제용 체크박스 컬럼을 지웁니다
+                        final_sub_df = edited_sub_df.drop(columns=['🗑️'])
+                        
+                        # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
+                        final_sub_df['대책'] = final_sub_df['대책'].fillna('- 대책을 입력하세요.')
+                        final_sub_df["빈도"] = new_freq
+                        final_sub_df["강도"] = new_sev
+                        final_sub_df["위험성"] = risk_score
+                        final_sub_df["등급"] = risk_grade
+                        
+                        # 다시 상위 정보(단계, 위험요인)를 붙여서 보관
+                        final_sub_df.insert(0, '위험요인', new_factor_name)
+                        final_sub_df.insert(0, '단계', new_step_name)
+                        
+                        # 대책이 하나라도 남아있는 경우만 추가 (모두 삭제하면 그룹 자체를 생략)
+                        if not final_sub_df.empty:
+                            updated_data_frames.append(final_sub_df)
+                        
+        # 3. 모든 그룹 변경사항을 하나의 Dataframe으로 재병합 (A4 출력을 위함)
+        if updated_data_frames:
+            st.session_state.result_df = pd.concat(updated_data_frames, ignore_index=True)
+            
+            # 명시적 버튼(추가/삭제)이 눌린 경우, widget state 오류 방지를 위해 에디터 세션을 날리고 새로고침
+            if st.session_state.get('needs_rerun', False):
+                st.session_state['needs_rerun'] = False
+                for key in list(st.session_state.keys()):
+                    if key.startswith("editor_"):
+                        del st.session_state[key]
+                st.rerun()
+
+    # A4 출력 로직
+    st.divider()
+    st.markdown("### 📋 위험성평가 결과 (A4 출력용)")
     
-    with tab_edit:
-        st.markdown("### 📝 위험성평가 세부 편집")
-        st.info("💡 각 단계별(▼) 아코디언을 열어 위험요인 그룹 내에서 대책을 수정하세요. 표 안에서 ➕ 버튼을 누르면 해당 위험요인 바로 아래에 새 대책 행이 정확히 삽입됩니다.")
+    df = st.session_state.result_df.copy()
     
-        if 'result_df' not in st.session_state or st.session_state.result_df.empty:
-            st.warning("데이터가 없습니다.")
+    # [NEW] PDF 출력을 위한 대책 Roll-up (동일 위험요인의 개별 행들을 하나로 병합)
+    rollup_rows = []
+    
+    # 단계와 위험요인 순서를 유지하며 그룹화
+    for (step, factor), group in df.groupby(['단계', '위험요인'], sort=False):
+        # 빈 대책이나 '-' 만 있는 텍스트는 걸러내고 조인
+        measures = group['대책'].astype(str).tolist()
+        valid_measures = [m for m in measures if m.strip() and m.strip() != '-']
+        combined_measures = "\n".join(valid_measures) if valid_measures else "- 대책을 입력하세요."
+        
+        # 빈도, 강도는 그룹 내 최댓값 적용
+        max_freq = int(group['빈도'].max())
+        max_int = int(group['강도'].max())
+        max_risk = max_freq * max_int
+        grade_text = "상" if max_risk >= 6 else ("중" if max_risk >= 3 else "하")
+        max_grade = f"{max_risk}({grade_text})"
+        
+        rollup_rows.append({
+            '단계': step,
+            '위험요인': factor,
+            '대책': combined_measures,
+            '빈도': max_freq,
+            '강도': max_int,
+            '위험성': max_risk,
+            '등급': max_grade
+        })
+        
+    rollup_df = pd.DataFrame(rollup_rows)
+    
+    # Flatten Data for Pagination
+    grouped_df = rollup_df.groupby('단계', sort=False)
+    flat_data = []
+    
+    for step_name, group in grouped_df:
+        first_in_group = True
+        for idx, row in group.iterrows():
+            item = row.to_dict()
+            item['is_first'] = first_in_group
+            item['step_name'] = step_name
+            item['group_size'] = len(group)
+            flat_data.append(item)
+            first_in_group = False
+            
+    # Dynamic Pagination Logic using UI helper
+    pages = []
+    current_page = []
+    
+    current_height = 0
+    
+    # Header HTML
+    header_html = ui.create_header_html(
+        task_name, location, site_name, protectors, safety_equip, tools, materials,
+        writer_name, writer_date_str, action_taker, 
+        reviewer_name, reviewer_date_str, checker_name, 
+        approver_name, approver_date_str
+    )
+    
+    # Calculate Dynamic Header Height
+    # Base height for header includes the fixed rows and standard spacing
+    base_header_lines = 15.0 # Increased base lines to account for padding & margins tighter
+    
+    # Calculate extra lines needed for long text in header fields
+    extra_title_lines = max(0, ui.count_view_lines(task_name, 45) - 1)
+    extra_prot_lines = max(0, ui.count_view_lines(', '.join(protectors), 30) - 1)
+    extra_loc_lines = max(0, ui.count_view_lines(location, 30) - 1)
+    extra_equip_lines = max(0, ui.count_view_lines(', '.join(safety_equip), 30) - 1)
+    extra_tools_lines = max(0, ui.count_view_lines(', '.join(tools), 30) - 1)
+    extra_mat_lines = max(0, ui.count_view_lines(', '.join(materials), 30) - 1)
+    
+    # Add up all the extra lines that expand the header vertically
+    row2_extra = max(extra_prot_lines, extra_loc_lines)
+    row3_extra = extra_equip_lines
+    row4_extra = extra_tools_lines
+    row5_extra = extra_mat_lines
+    
+    total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
+    
+    # Capacity in "lines" (Heuristic) - User-specified values
+    PAGE_N_CAPACITY = 39.0 
+    # Page 1: fixed total height. Base content=24 when header is minimal.
+    # When header grows, content area shrinks proportionally.
+    extra_header = total_header_lines - base_header_lines  # only the overflow
+    PAGE_1_CAPACITY = max(10.0, 24.0 - extra_header)
+    
+    limit = PAGE_1_CAPACITY
+    
+    # Process items as a queue
+    queue = flat_data.copy()
+    
+    while queue:
+        item = queue.pop(0)
+        
+        measure_text = str(item.get('대책', ''))
+        factor_text = str(item.get('위험요인', ''))
+        
+        # Calculate height: relaxed constraints increase line capacity per row
+        step_lines = ui.count_view_lines(item['step_name'], 10) if item['is_first'] else 0
+        measure_lines = ui.count_view_lines(measure_text, 36) # Relaxed constraint
+        factor_lines = ui.count_view_lines(factor_text, 20)  # 위험요인 칼럼은 좁으므로 보수적으로
+        
+        row_height = max(item['is_first'] * max(step_lines, 1), factor_lines, measure_lines)
+        
+        if current_height + row_height <= limit:
+            current_page.append(item)
+            current_height += row_height
         else:
-            current_df = st.session_state.result_df.copy()
+            # Overflow
+            remaining_space = limit - current_height
             
-            # 전체 데이터를 담을 임시 리스트 (나중에 하나로 합침)
-            updated_data_frames = []
-            
-            # 작업단계 별로 그룹화
-            grouped_by_step = current_df.groupby('단계', sort=False)
-            
-            for step_name, step_group in grouped_by_step:
-                with st.expander(f"📁 {step_name}", expanded=True):
-                    # 단계 이름 수정 기능
-                    new_step_name = st.text_input("현재 그룹 단계명 수정", value=step_name, key=f"step_rename_{step_name}")
-                    
-                    # 다시 위험요인 별로 그룹화
-                    grouped_by_factor = step_group.groupby('위험요인', sort=False)
-                    
-                    for factor_name, factor_group in grouped_by_factor:
-                            # 위험요인의 첫 번째 행 빈도/강도를 기본값으로 사용
-                            default_freq = int(factor_group['빈도'].iloc[0]) if not pd.isna(factor_group['빈도'].iloc[0]) else 1
-                            default_sev  = int(factor_group['강도'].iloc[0]) if not pd.isna(factor_group['강도'].iloc[0]) else 1
-                            
-                            col_title, col_freq, col_sev, col_risk = st.columns([6, 1.5, 1.5, 1.5])
-                            # 위험요인 수정 박스 및 빈도/강도 (통합)
-                            new_factor_name = col_title.text_input("⚠️ 유해·위험요인", value=factor_name, key=f"factor_rename_{step_name}_{factor_name}")
-                            new_freq = col_freq.number_input("빈도", min_value=1, max_value=5, value=default_freq, key=f"freq_{step_name}_{factor_name}")
-                            new_sev = col_sev.number_input("강도", min_value=1, max_value=4, value=default_sev, key=f"sev_{step_name}_{factor_name}")
-                            
-                            risk_score = new_freq * new_sev
-                            risk_grade = "🔴 상" if risk_score >= 6 else ("🟡 중" if risk_score >= 3 else "🟢 하")
-                            col_risk.markdown(f"**위험성 (등급)**<br><span style='font-size:16px;'>{risk_score} ({risk_grade})</span>", unsafe_allow_html=True)
-                            
-                            # 대책 입력용 에디터 (빈도/강도 제외)
-                            sub_df = factor_group[['대책']].copy()
-                            sub_df.insert(0, '🗑️', False) # 명시적 삭제용 체크박스
-                            # "선택" 체크박스 열 너비 강제 최소화 CSS 주입
-                            st.markdown("""
-                            <style>
-                            /* 명시적 추가/삭제 버튼을 사용하므로 왼쪽 인덱스 열을 완전히 숨김처리 */
-                            div[data-testid="stDataFrame"] div[role="rowheader"] {
-                                display: none !important;
-                            }
-                            </style>
-                            """, unsafe_allow_html=True)
-    
-                            edited_sub_df = st.data_editor(
-                                sub_df,
-                                num_rows="fixed", # 명시적 버튼을 사용하므로 기본 동적 추가 비활성화하여 인덱스 숨김 유지
-                                use_container_width=True,
-                                key=f"editor_{step_name}_{factor_name}",
-                                column_config={
-                                    "🗑️": st.column_config.CheckboxColumn("선택", help="삭제할 항목을 선택하세요", default=False, width="small"),
-                                    "대책": st.column_config.TextColumn("위험 제거 및 감소 대책 (더블클릭 편집)", width="large", required=True)
-                                },
-                                hide_index=True
-                            )
-                            
-                            # 명시적인 행 추가/삭제 버튼 제공
-                            _, add_col, del_col = st.columns([7.6, 1.2, 1.2])
-                            
-                            if add_col.button("추가", key=f"btn_add_{step_name}_{factor_name}", use_container_width=True):
-                                # 새 빈 행 추가 
-                                edited_sub_df.loc[len(edited_sub_df)] = [False, ""]
-                                st.session_state['needs_rerun'] = True
-                            
-                            if del_col.button("삭제", key=f"btn_del_{step_name}_{factor_name}", use_container_width=True):
-                                # 버튼이 눌렸을 때만 '🗑️'가 True인 행 지우기
-                                edited_sub_df = edited_sub_df[edited_sub_df['🗑️'] == False].reset_index(drop=True)
-                                st.session_state['needs_rerun'] = True
-                            
-                            # 저장용 데이터프레임에서는 삭제용 체크박스 컬럼을 지웁니다
-                            final_sub_df = edited_sub_df.drop(columns=['🗑️'])
-                            
-                            # 하위 표 계산식 복원 (위에서 입력한 단일 빈도/강도를 전체 대책에 동일 적용)
-                            final_sub_df['대책'] = final_sub_df['대책'].fillna('- 대책을 입력하세요.')
-                            final_sub_df["빈도"] = new_freq
-                            final_sub_df["강도"] = new_sev
-                            final_sub_df["위험성"] = risk_score
-                            final_sub_df["등급"] = risk_grade
-                            
-                            # 다시 상위 정보(단계, 위험요인)를 붙여서 보관
-                            final_sub_df.insert(0, '위험요인', new_factor_name)
-                            final_sub_df.insert(0, '단계', new_step_name)
-                            
-                            # 대책이 하나라도 남아있는 경우만 추가 (모두 삭제하면 그룹 자체를 생략)
-                            if not final_sub_df.empty:
-                                updated_data_frames.append(final_sub_df)
-                            
-            # 3. 모든 그룹 변경사항을 하나의 Dataframe으로 재병합 (A4 출력을 위함)
-            if updated_data_frames:
-                st.session_state.result_df = pd.concat(updated_data_frames, ignore_index=True)
+            # 1. Try to split to fill remainder of CURRENT page
+            split_succcess = False
+            if current_height > 0 and remaining_space >= 3.0:
+                # Use bullet-aware split for measures
+                head_meas, tail_meas = ui.split_measures_by_bullet(measure_text, int(remaining_space), 30)
+                # Keep standard split for factors (less critical, allow filling)
+                head_fact, tail_fact = ui.split_text_to_fit(factor_text, int(remaining_space), 22)
                 
-                # 명시적 버튼(추가/삭제)이 눌린 경우, widget state 오류 방지를 위해 에디터 세션을 날리고 새로고침
-                if st.session_state.get('needs_rerun', False):
-                    st.session_state['needs_rerun'] = False
-                    for key in list(st.session_state.keys()):
-                        if key.startswith("editor_"):
-                            del st.session_state[key]
-                    st.rerun()
-    
-    with tab_report:
-        # A4 출력 로직
-        st.markdown("### 📋 위험성평가 결과 (A4 출력용)")
-    
-        df = st.session_state.result_df.copy()
-        
-        # [NEW] PDF 출력을 위한 대책 Roll-up (동일 위험요인의 개별 행들을 하나로 병합)
-        rollup_rows = []
-        
-        # 단계와 위험요인 순서를 유지하며 그룹화
-        for (step, factor), group in df.groupby(['단계', '위험요인'], sort=False):
-            # 빈 대책이나 '-' 만 있는 텍스트는 걸러내고 조인
-            measures = group['대책'].astype(str).tolist()
-            valid_measures = [m for m in measures if m.strip() and m.strip() != '-']
-            combined_measures = "\n".join(valid_measures) if valid_measures else "- 대책을 입력하세요."
-            
-            # 빈도, 강도는 그룹 내 최댓값 적용
-            max_freq = int(group['빈도'].max())
-            max_int = int(group['강도'].max())
-            max_risk = max_freq * max_int
-            grade_text = "상" if max_risk >= 6 else ("중" if max_risk >= 3 else "하")
-            max_grade = f"{max_risk}({grade_text})"
-            
-            rollup_rows.append({
-                '단계': step,
-                '위험요인': factor,
-                '대책': combined_measures,
-                '빈도': max_freq,
-                '강도': max_int,
-                '위험성': max_risk,
-                '등급': max_grade
-            })
-            
-        rollup_df = pd.DataFrame(rollup_rows)
-        
-        # Flatten Data for Pagination
-        grouped_df = rollup_df.groupby('단계', sort=False)
-        flat_data = []
-        
-        for step_name, group in grouped_df:
-            first_in_group = True
-            for idx, row in group.iterrows():
-                item = row.to_dict()
-                item['is_first'] = first_in_group
-                item['step_name'] = step_name
-                item['group_size'] = len(group)
-                flat_data.append(item)
-                first_in_group = False
-                
-        # Dynamic Pagination Logic using UI helper
-        pages = []
-        current_page = []
-        
-        current_height = 0
-        
-        # Header HTML
-        header_html = ui.create_header_html(
-            task_name, location, site_name, protectors, safety_equip, tools, materials,
-            writer_name, writer_date_str, action_taker, 
-            reviewer_name, reviewer_date_str, checker_name, 
-            approver_name, approver_date_str
-        )
-        
-        # Calculate Dynamic Header Height
-        # Base height for header includes the fixed rows and standard spacing
-        base_header_lines = 15.0 # Increased base lines to account for padding & margins tighter
-        
-        # Calculate extra lines needed for long text in header fields
-        extra_title_lines = max(0, ui.count_view_lines(task_name, 45) - 1)
-        extra_prot_lines = max(0, ui.count_view_lines(', '.join(protectors), 30) - 1)
-        extra_loc_lines = max(0, ui.count_view_lines(location, 30) - 1)
-        extra_equip_lines = max(0, ui.count_view_lines(', '.join(safety_equip), 30) - 1)
-        extra_tools_lines = max(0, ui.count_view_lines(', '.join(tools), 30) - 1)
-        extra_mat_lines = max(0, ui.count_view_lines(', '.join(materials), 30) - 1)
-        
-        # Add up all the extra lines that expand the header vertically
-        row2_extra = max(extra_prot_lines, extra_loc_lines)
-        row3_extra = extra_equip_lines
-        row4_extra = extra_tools_lines
-        row5_extra = extra_mat_lines
-        
-        total_header_lines = base_header_lines + extra_title_lines + row2_extra + row3_extra + row4_extra + row5_extra
-        
-        # Capacity in "lines" (Heuristic) - User-specified values
-        PAGE_N_CAPACITY = 39.0 
-        # Page 1: fixed total height. Base content=24 when header is minimal.
-        # When header grows, content area shrinks proportionally.
-        extra_header = total_header_lines - base_header_lines  # only the overflow
-        PAGE_1_CAPACITY = max(10.0, 24.0 - extra_header)
-        
-        limit = PAGE_1_CAPACITY
-        
-        # Process items as a queue
-        queue = flat_data.copy()
-        
-        while queue:
-            item = queue.pop(0)
-            
-            measure_text = str(item.get('대책', ''))
-            factor_text = str(item.get('위험요인', ''))
-            
-            # Calculate height: relaxed constraints increase line capacity per row
-            step_lines = ui.count_view_lines(item['step_name'], 15) if item['is_first'] else 0
-            measure_lines = ui.count_view_lines(measure_text, 36) # Relaxed constraint
-            factor_lines = ui.count_view_lines(factor_text, 28)  # 위험요인 칼럼은 좁으므로 보수적으로
-            
-            row_height = max(item['is_first'] * max(step_lines, 1), factor_lines, measure_lines)
-            
-            if current_height + row_height <= limit:
-                current_page.append(item)
-                current_height += row_height
-            else:
-                # Overflow
-                remaining_space = limit - current_height
-                
-                # 1. Try to split to fill remainder of CURRENT page
-                split_succcess = False
-                if current_height > 0 and remaining_space >= 3.0:
-                    # Use bullet-aware split for measures
-                    head_meas, tail_meas = ui.split_measures_by_bullet(measure_text, int(remaining_space), 30)
-                    # Keep standard split for factors (less critical, allow filling)
-                    head_fact, tail_fact = ui.split_text_to_fit(factor_text, int(remaining_space), 22)
-                    
-                    # Critical Check: If measure text exists but head is empty, it means first bullet didn't fit.
-                    # In this case, we should NOT split. Move entire row to next page.
-                    if measure_text and not head_meas:
-                         # Force page break (fail split)
-                         pass 
-                    elif head_meas or head_fact:
-                        # Success split (at least some measures fit, or factor fit)
-                        # Note: if head_meas is valid partial, we proceed.
-                        item_head = item.copy()
-                        item_head['대책'] = head_meas
-                        item_head['위험요인'] = head_fact
-                        
-                        item_tail = item.copy()
-                        item_tail['대책'] = tail_meas if tail_meas else "(대책 내용 계속)"
-                        item_tail['위험요인'] = tail_fact if tail_fact else f"{factor_text} (계속)"
-                        item_tail['is_first'] = False
-                        
-                        current_page.append(item_head)
-                        pages.append(current_page)
-                        current_page = []
-                        current_height = 0
-                        limit = PAGE_N_CAPACITY
-                        
-                        queue.insert(0, item_tail)
-                        split_succcess = True
-                        continue
-    
-                # 2. If we couldn't split to fit remainder (or remainder too small), start new page
-                if current_height > 0:
-                    pages.append(current_page)
-                    current_page = []
-                    current_height = 0
-                    limit = PAGE_N_CAPACITY
-                    # Treat this item as if it's the start of the new page
-                    queue.insert(0, item)
-                    continue
-                
-                # 3. We are on a FRESH page (current_height == 0) but item doesn't fit
-                # Force split against the full limit
-                head_meas, tail_meas = ui.split_measures_by_bullet(measure_text, int(limit), 30)
-                
-                # [CRITICAL FIX] If a SINGLE bullet point is larger than the entire page,
-                # split_measures_by_bullet returns empty head. We must fallback to arbitrary split.
+                # Critical Check: If measure text exists but head is empty, it means first bullet didn't fit.
+                # In this case, we should NOT split. Move entire row to next page.
                 if measure_text and not head_meas:
-                     head_meas, tail_meas = ui.split_text_to_fit(measure_text, int(limit), 30)
-    
-                head_fact, tail_fact = ui.split_text_to_fit(factor_text, int(limit), 22)
-                
-                if head_meas or head_fact:
+                     # Force page break (fail split)
+                     pass 
+                elif head_meas or head_fact:
+                    # Success split (at least some measures fit, or factor fit)
+                    # Note: if head_meas is valid partial, we proceed.
                     item_head = item.copy()
                     item_head['대책'] = head_meas
                     item_head['위험요인'] = head_fact
@@ -510,7 +465,7 @@ if 'result_df' in st.session_state:
                     item_tail = item.copy()
                     item_tail['대책'] = tail_meas if tail_meas else "(대책 내용 계속)"
                     item_tail['위험요인'] = tail_fact if tail_fact else f"{factor_text} (계속)"
-                    item_tail['is_first'] = False # Tail is always continuation
+                    item_tail['is_first'] = False
                     
                     current_page.append(item_head)
                     pages.append(current_page)
@@ -519,133 +474,174 @@ if 'result_df' in st.session_state:
                     limit = PAGE_N_CAPACITY
                     
                     queue.insert(0, item_tail)
+                    split_succcess = True
                     continue
-                else:
-                     # Cannot split even for full page? (e.g. very long word or bug)
-                     # Force add to avoid infinite loop
-                     current_page.append(item)
-                     current_height += row_height
-        
-        if current_page:
-            pages.append(current_page)
+
+            # 2. If we couldn't split to fit remainder (or remainder too small), start new page
+            if current_height > 0:
+                pages.append(current_page)
+                current_page = []
+                current_height = 0
+                limit = PAGE_N_CAPACITY
+                # Treat this item as if it's the start of the new page
+                queue.insert(0, item)
+                continue
             
-        # Render Pages
-        full_html = ""
-        
-        # ---------------------------------------------------------
-        # [FIX] Print Button via Iframe (avoids Markdown sanitization)
-        # ---------------------------------------------------------
-        print_btn_html = """
-        <html>
-        <head>
-        <style>
-            body { margin: 0; padding: 0; text-align: center; background-color: transparent; }
-            .print-btn {
-                background-color: #2ecc71; 
-                color: white; 
-                padding: 12px 24px; 
-                border: none; 
-                border-radius: 5px; 
-                cursor: pointer; 
-                font-size: 16px; 
-                font-weight: bold; 
-                font-family: 'Noto Sans KR', sans-serif;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                transition: all 0.3s ease;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .print-btn:hover {
-                background-color: #27ae60;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 8px rgba(0,0,0,0.15);
-            }
-            .desc {
-                margin-top: 8px; font-size: 13px; color: #888; font-family: sans-serif;
-            }
-        </style>
-        </head>
-        <body>
-            <button class="print-btn" onclick="window.parent.print()">
-                <span>🖨️ 평가표 PDF 저장 / 인쇄</span>
-            </button>
-            <div class="desc">💡 팝업창에서 <b>'PDF로 저장'</b>을 선택하세요.</div>
-        </body>
-        </html>
-        """
-        st.components.v1.html(print_btn_html, height=100)
-        
-        # Continue rendering report pages
-        # Wrap everything in a printable area for CSS targeting
-        full_html += '<div id="printable-area">'
-        
-        for i, page_items in enumerate(pages):
-            # A4 Page Container
-            header_text = header_html if i == 0 else f'<div style="text-align:right; font-size:10px; margin-bottom:5px; color:black;">공종별 위험성평가표 ({i+1}/{len(pages)})</div>'
+            # 3. We are on a FRESH page (current_height == 0) but item doesn't fit
+            # Force split against the full limit
+            head_meas, tail_meas = ui.split_measures_by_bullet(measure_text, int(limit), 30)
             
-            full_html += f"""<div class="a4-page">
-    {header_text}
-    <table class="safety-table">
-    <colgroup>
-    <col style="width: 10%;">
-    <col style="width: 25%;">
-    <col style="width: 50%;">
-    <col style="width: 5%;">
-    <col style="width: 5%;">
-    <col style="width: 5%;">
-    </colgroup>
-    <tr>
-    <th>작업단계</th>
-    <th>위험요인</th>
-    <th>위험 제거 및 감소대책</th>
-    <th>빈도</th>
-    <th>강도</th>
-    <th>등급</th>
-    </tr>"""
+            # [CRITICAL FIX] If a SINGLE bullet point is larger than the entire page,
+            # split_measures_by_bullet returns empty head. We must fallback to arbitrary split.
+            if measure_text and not head_meas:
+                 head_meas, tail_meas = ui.split_text_to_fit(measure_text, int(limit), 30)
+
+            head_fact, tail_fact = ui.split_text_to_fit(factor_text, int(limit), 22)
             
-            from itertools import groupby
-            
-            # Group items by step_name for rowspan calculation
-            step_groups = []
-            for key, group in groupby(page_items, key=lambda x: x['step_name']):
-                step_groups.append(list(group))
+            if head_meas or head_fact:
+                item_head = item.copy()
+                item_head['대책'] = head_meas
+                item_head['위험요인'] = head_fact
                 
-            for group in step_groups:
-                rowspan = len(group)
-                for idx, item in enumerate(group):
-                    step_cell_html = ""
-                    if idx == 0:
-                        step_display = item['step_name']
-                        if not item['is_first']:
-                             step_display += " (계속)"
-                        step_cell_html = f'<td rowspan="{rowspan}" style="vertical-align: middle; font-weight: bold; background-color: #f9f9f9;">{step_display}</td>'
-                    
-                    # Grade Styling
-                    grade_val = item['등급'].strip()
-                    grade_display = grade_val
-                    if "상" in grade_val:
-                        grade_display = f'<span style="color:red; font-weight:bold;">{grade_val}</span>'
-                    elif "중" in grade_val:
-                        grade_display = f'<span style="color:#d35400; font-weight:bold;">{grade_val}</span>'
-                    elif "하" in grade_val:
-                        grade_display = f'<span style="color:green; font-weight:bold;">{grade_val}</span>'
+                item_tail = item.copy()
+                item_tail['대책'] = tail_meas if tail_meas else "(대책 내용 계속)"
+                item_tail['위험요인'] = tail_fact if tail_fact else f"{factor_text} (계속)"
+                item_tail['is_first'] = False # Tail is always continuation
+                
+                current_page.append(item_head)
+                pages.append(current_page)
+                current_page = []
+                current_height = 0
+                limit = PAGE_N_CAPACITY
+                
+                queue.insert(0, item_tail)
+                continue
+            else:
+                 # Cannot split even for full page? (e.g. very long word or bug)
+                 # Force add to avoid infinite loop
+                 current_page.append(item)
+                 current_height += row_height
     
-                    full_html += f"""
-    <tr>
-    {step_cell_html}
-    <td style="text-align:left;">{item['위험요인'].replace(chr(10), '<br>')}</td>
-    <td style="text-align:left;">{item['대책'].replace(chr(10), '<br>')}</td>
-    <td>{item['빈도']}</td>
-    <td>{item['강도']}</td>
-    <td>{grade_display}</td>
-    </tr>"""
+    if current_page:
+        pages.append(current_page)
+        
+    # Render Pages
+    full_html = ""
+    
+    # ---------------------------------------------------------
+    # [FIX] Print Button via Iframe (avoids Markdown sanitization)
+    # ---------------------------------------------------------
+    print_btn_html = """
+    <html>
+    <head>
+    <style>
+        body { margin: 0; padding: 0; text-align: center; background-color: transparent; }
+        .print-btn {
+            background-color: #2ecc71; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold; 
+            font-family: 'Noto Sans KR', sans-serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .print-btn:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+        .desc {
+            margin-top: 8px; font-size: 13px; color: #888; font-family: sans-serif;
+        }
+    </style>
+    </head>
+    <body>
+        <button class="print-btn" onclick="window.parent.print()">
+            <span>🖨️ 평가표 PDF 저장 / 인쇄</span>
+        </button>
+        <div class="desc">💡 팝업창에서 <b>'PDF로 저장'</b>을 선택하세요.</div>
+    </body>
+    </html>
+    """
+    st.components.v1.html(print_btn_html, height=100)
+    
+    # Continue rendering report pages
+    # Wrap everything in a printable area for CSS targeting
+    full_html += '<div id="printable-area">'
+    
+    for i, page_items in enumerate(pages):
+        # A4 Page Container
+        header_text = header_html if i == 0 else f'<div style="text-align:right; font-size:10px; margin-bottom:5px; color:black;">공종별 위험성평가표 ({i+1}/{len(pages)})</div>'
+        
+        full_html += f"""<div class="a4-page">
+{header_text}
+<table class="safety-table">
+<colgroup>
+<col style="width: 10%;">
+<col style="width: 25%;">
+<col style="width: 50%;">
+<col style="width: 5%;">
+<col style="width: 5%;">
+<col style="width: 5%;">
+</colgroup>
+<tr>
+<th>작업단계</th>
+<th>위험요인</th>
+<th>위험 제거 및 감소대책</th>
+<th>빈도</th>
+<th>강도</th>
+<th>등급</th>
+</tr>"""
+        
+        from itertools import groupby
+        
+        # Group items by step_name for rowspan calculation
+        step_groups = []
+        for key, group in groupby(page_items, key=lambda x: x['step_name']):
+            step_groups.append(list(group))
+            
+        for group in step_groups:
+            rowspan = len(group)
+            for idx, item in enumerate(group):
+                step_cell_html = ""
+                if idx == 0:
+                    step_display = item['step_name']
+                    if not item['is_first']:
+                         step_display += " (계속)"
+                    step_cell_html = f'<td rowspan="{rowspan}" style="vertical-align: middle; font-weight: bold; background-color: #f9f9f9;">{step_display}</td>'
                 
-            full_html += """
-    </table>
-    </div>"""
+                # Grade Styling
+                grade_val = item['등급'].strip()
+                grade_display = grade_val
+                if "상" in grade_val:
+                    grade_display = f'<span style="color:red; font-weight:bold;">{grade_val}</span>'
+                elif "중" in grade_val:
+                    grade_display = f'<span style="color:#d35400; font-weight:bold;">{grade_val}</span>'
+                elif "하" in grade_val:
+                    grade_display = f'<span style="color:green; font-weight:bold;">{grade_val}</span>'
+
+                full_html += f"""
+<tr>
+{step_cell_html}
+<td style="text-align:left;">{item['위험요인'].replace(chr(10), '<br>')}</td>
+<td style="text-align:left;">{item['대책'].replace(chr(10), '<br>')}</td>
+<td>{item['빈도']}</td>
+<td>{item['강도']}</td>
+<td>{grade_display}</td>
+</tr>"""
             
-        full_html += '</div>' # Close printable-area
-            
-        st.markdown(full_html, unsafe_allow_html=True)
-        ui.mark_printable_container()
+        full_html += """
+</table>
+</div>"""
+        
+    full_html += '</div>' # Close printable-area
+        
+    st.markdown(full_html, unsafe_allow_html=True)
+    ui.mark_printable_container()
