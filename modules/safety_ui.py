@@ -68,7 +68,11 @@ def apply_custom_css():
             padding: 0 !important;
             background-color: white !important;
             overflow: visible !important;
-        }
+            }
+            [data-testid="stExpander"], [data-testid="stDataFrame"], .stTabs, [data-testid="stVerticalBlock"] > .element-container:not(.report-element-container) {
+        display: none !important;
+    }
+        
 
         /* 1. Hide all Streamlit element containers (this removes all the blank UI pages!) */
         .element-container {
@@ -261,7 +265,7 @@ def count_view_lines(text, chars_per_line):
 
     # Fix: Split by actual newline character, not literal string '\\n'
 
-    lines = str(text).split('\\n')
+    lines = str(text).split('\n')
 
     total = 0
 
