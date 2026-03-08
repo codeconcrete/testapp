@@ -66,10 +66,7 @@ def generate_risk_assessment(api_key, task_name, location, risk_factors, risk_co
     """2단계: 위험성평가표 생성"""
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel(
-            'gemini-1.5-flash-lite-001', 
-            generation_config={"response_mime_type": "application/json"}
-        )
+        model = genai.GenerativeModel('gemini-3.1-flash-lite', generation_config={"response_mime_type": "application/json"})
 
         prompt = f"""
         건설 안전 기술사로서 아래 작업에 대한 위험성평가표(JSA)를 작성하세요.
