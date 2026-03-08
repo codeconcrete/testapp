@@ -68,11 +68,7 @@ def apply_custom_css():
             padding: 0 !important;
             background-color: white !important;
             overflow: visible !important;
-            }
-            [data-testid="stExpander"], [data-testid="stDataFrame"], .stTabs, [data-testid="stVerticalBlock"] > .element-container:not(.report-element-container) {
-        display: none !important;
-    }
-        
+        }
 
         /* 1. Hide all Streamlit element containers (this removes all the blank UI pages!) */
         .element-container {
@@ -97,7 +93,7 @@ def apply_custom_css():
         }
         
         /* 4. Disable flex stretch to allow pages to flow naturally */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"] {
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stMainBlockContainer"], .block-container, div[data-testid="stVerticalBlock"], [data-testid="stExpander"], [data-testid="stDataFrame"] {
             position: static !important;
             width: 100% !important;
             max-width: 100% !important;
@@ -107,6 +103,11 @@ def apply_custom_css():
             transform: none !important;
             display: block !important;
             overflow: visible !important;
+        }
+
+        /* Explicitly hide expanders and data editors in print */
+        [data-testid="stExpander"], [data-testid="stDataFrame"], .stTabs, [data-testid="stVerticalBlock"] > .element-container:not(.report-element-container) {
+            display: none !important;
         }
         
         /* 5. The printable area flows naturally */
