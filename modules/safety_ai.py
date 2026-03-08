@@ -6,7 +6,7 @@ def generate_draft_equipment(api_key, task_name, location, risk_factors, risk_co
     """1단계: 장비 및 준비물 추천 초안 생성"""
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-flash-latest', generation_config={"response_mime_type": "application/json"})
+        model = genai.GenerativeModel('gemini-3.1-flash-lite-preview', generation_config={"response_mime_type": "application/json"})
         
         req_prompt = f"""
             건설 안전 전문가로서 다음 작업에 필요한 장비와 준비물을 제안하세요.
@@ -66,7 +66,7 @@ def generate_risk_assessment(api_key, task_name, location, risk_factors, risk_co
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            'gemini-flash-latest', 
+            'gemini-3.1-flash-lite-preview', 
             generation_config={"response_mime_type": "application/json"}
         )
 
